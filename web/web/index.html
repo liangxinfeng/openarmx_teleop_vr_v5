@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Autolife 306 V4 Independent VR Teleoperation</title>
+    <meta name="description" content="Autolife 306 V4 independent VR arm teleoperation">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="vendor/aframe.min.js"></script>
+    <script src="vr_app.js?v=autolife-306-v2-independent-teleop-4" defer></script>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main id="launchPanel" class="launch-panel">
+      <div class="brand-logo">AUTOLIFE</div>
+      <div class="title">306 V4 独立双臂遥操</div>
+      <div id="serverUrl" class="server-url">loading...</div>
+      <section id="hardwareControl" class="hardware-control" aria-live="polite">
+        <div class="hardware-status-row">
+          <span id="hardwareStatusDot" class="hardware-status-dot"></span>
+          <span id="hardwareStatusLabel" class="hardware-status-label">真机遥操状态读取中</span>
+        </div>
+        <div id="hardwareStatusDetail" class="hardware-status-detail">
+          正在等待遥操节点状态……
+        </div>
+        <button id="hardwareToggleButton" class="hardware-toggle-button" type="button" disabled>
+          按住 1 秒，全身复位后使能
+        </button>
+        <div class="hardware-safety-hint">
+          长按后机器人会先执行系统全身复位，再自动使能遥操。请确认机器人全身周围无人、无障碍物，并保持 VR 手柄在线。
+        </div>
+      </section>
+      <button id="startVrButton" class="start-button" type="button">进入 VR 遥操</button>
+      <div id="statusText" class="status-text">正在准备...</div>
+    </main>
+
+    <a-scene
+      vr-mode-ui="enabled: false"
+      webxr="referenceSpaceType: local-floor; optionalFeatures: local-floor, bounded-floor"
+      renderer="antialias: true; colorManagement: true"
+      background="color: #05070A">
+      <a-entity webxr-passthrough="referenceSpaceType: local-floor"></a-entity>
+      <a-entity id="cameraRig" position="0 1.55 -2.0"></a-entity>
+
+      <a-entity id="leftHand" oculus-touch-controls="hand: left"></a-entity>
+      <a-entity id="rightHand" oculus-touch-controls="hand: right"></a-entity>
+
+      <a-entity light="type: ambient; intensity: 1.0"></a-entity>
+    </a-scene>
+  </body>
+</html>

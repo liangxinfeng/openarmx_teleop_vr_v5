@@ -42,9 +42,10 @@ independent_arm_controller_306_v4:
     require_gripper_subscriber: true
     require_prepare_subscriber: false
     hardware_session_mode: "sync"
+    sync_hold_only_enable: true
     arm_enable_prepare_wait_seconds: 1.5
     require_sync_session_service: true
-    sync_session_request_timeout_sec: 8.0
+    sync_session_request_timeout_sec: 12.0
     require_joint_enable_subscribers: true
     output_guard_period_sec: 0.50
 
@@ -59,7 +60,7 @@ independent_arm_controller_306_v4:
     arm_enable_hold_before_seconds: 0.4
     arm_enable_clear_wait_seconds: 1.0
     arm_enable_settle_seconds: 1.0
-    arm_enable_completion_timeout_seconds: 20.0
+    arm_enable_completion_timeout_seconds: 60.0
     # Web enable holds measured joints and invokes the existing 306 arms-only
     # ASYNC position preparation callback. It never invokes whole-body reset.
     reset_before_hardware_enable: false
@@ -204,7 +205,7 @@ independent_arm_controller_306_v4:
     quick_reset_left_arm_joints: [0.0, 0.0, 0.0, 110.0, 0.0, 13.0, 0.0]
     quick_reset_right_arm_joints: [0.0, 0.0, 0.0, -110.0, 0.0, -13.0, 0.0]
     quick_reset_waist_joints: [0.0, 0.0]
-    quick_reset_neck_joints: [0.0, 0.0, 0.0]
+    quick_reset_neck_joints: [0.0, -20.0, 0.0]
     quick_reset_open_grippers: true
     quick_reset_gripper_open_position: 10.0
     quick_reset_tolerance_deg: 1.0

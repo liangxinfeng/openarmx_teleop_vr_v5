@@ -180,7 +180,7 @@ def test_one_hundred_enable_reset_cycles_never_accumulate_a_stuck_latch():
 
 def test_mapper_integrates_timeout_generation_and_input_callback_rearm():
     mapper = MAPPER.read_text(encoding='utf-8')
-    check_reset = _function_source(MAPPER, '_check_quick_reset')
+    check_reset = _function_source(MAPPER, '_check_reset_gesture')
     input_callback = _function_source(MAPPER, '_on_vr_input')
     boundary = _function_source(MAPPER, '_begin_session_boundary_locked')
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_PYTHON="/home/ubuntu/miniconda3/envs/robot_env/bin/python"
+BASE_PYTHON="/home/ubuntu/ros2_ws/venvs/openarmx_v4_placo/bin/python"
 VENV_DIR="/home/ubuntu/ros2_ws/venvs/openarmx_v4_placo"
 
 if [ ! -x "$BASE_PYTHON" ]; then

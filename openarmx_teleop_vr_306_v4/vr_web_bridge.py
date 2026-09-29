@@ -875,8 +875,12 @@ class VrWebBridge(Node):
         saw_pending = False
         last_reason = initial_message or '正在等待真机安全使能完成'
         while loop.time() < deadline:
-            status, _, fresh = self._teleop_status_snapshot()
-            if fresh and isinstance(status, dict):
+            status, status_age, fresh = self._teleop_status_snapshot()
+            # A previous failed attempt may still be cached when the service
+            # accepts this attempt. Only inspect status received afterwards.
+            if (fresh and status_age is not None
+                    and status_age <= loop.time() - started
+                    and isinstance(status, dict)):
                 backend = status.get('backend')
                 if not isinstance(backend, dict):
                     backend = status
@@ -910,7 +914,8 @@ class VrWebBridge(Node):
                 if pending or resetting:
                     saw_pending = True
                 elif state in ('FAULT', 'E_STOP'):
-                    return False, last_reason
+                    if saw_pending or loop.time() - started >= 0.75:
+                        return False, last_reason
                 elif saw_pending:
                     return False, last_reason
                 elif loop.time() - started >= 0.75 and state == 'DISARMED':

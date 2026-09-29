@@ -24,8 +24,10 @@ from .body_height import (
     BODY_HEIGHT_MAXIMUM_DEG,
     BODY_HEIGHT_JOINT_NAMES,
     MAX_BODY_LOWERING_M,
+    MAX_REVERSE_BODY_LOWERING_M,
     coordinated_body_height_targets,
     estimate_body_lowering,
+    measured_reverse_squat,
 )
 from .kinematics import IndependentArmKinematics
 from .quest_placo_kinematics import QuestPlacoKinematics
@@ -34,6 +36,7 @@ from .qos import latest_sample_qos, reliable_latest_qos
 from .reset_path import (
     conservative_reset_duration,
     continuous_direct_reset,
+    feedback_bounded_reset_progress,
 )
 from .schema import (
     parse_body_motion_feedback,
@@ -104,10 +107,8 @@ TELEOP_JOINT_NAMES = (
 TELEOP_LIMIT_JOINT_NAMES = ARM_JOINT_NAMES + WAIST_JOINT_NAMES
 RESET_TRACKED_JOINT_NAMES = ARM_JOINT_NAMES + NECK_JOINT_NAMES
 ENABLE_TRACKED_JOINT_NAMES = ARM_JOINT_NAMES + WAIST_JOINT_NAMES
-# X+A intentionally resets only both arms and the neck.  Completion must still
-# include the neck; otherwise head-follow can overwrite a target that never
-# reached the system default.  Legs and waist are preserved at measured pose.
-RESET_REQUIRED_JOINT_NAMES = RESET_TRACKED_JOINT_NAMES
+# X+A also stands up; Y+B holds height. Both require physical completion.
+RESET_REQUIRED_JOINT_NAMES = RESET_TRACKED_JOINT_NAMES + list(BODY_HEIGHT_JOINT_NAMES)
 
 
 def enable_vendor_pid_loop(shared_memory_glob):
@@ -286,6 +287,12 @@ class IndependentArmController(Node):
         )
         self._head_target = None
         self._head_target_time = 0.0
+        self._task_head_target = None
+        self._task_head_target_time = 0.0
+        self._task_head_request_id = ''
+        self._task_head_cancelled_id = ''
+        self._task_head_cancel_reason = ''
+        self._task_head_goal = None
 
         share = get_package_share_directory('openarmx_teleop_vr_306_v4')
         urdf = str(self.get_parameter('urdf_path').value)
@@ -298,7 +305,9 @@ class IndependentArmController(Node):
             urdf,
             srdf,
             allow_waist=waist_in_ik,
-            collision_check=self._collision_required,
+            # Keep geometry available for autonomous reset preflight even
+            # when ordinary per-frame teleoperation collision checks are off.
+            collision_check=True,
             limit_margin_rad=np.deg2rad(
                 float(self.get_parameter('joint_limit_margin_deg').value)
             ),
@@ -375,7 +384,9 @@ class IndependentArmController(Node):
         self._joint_clear_error_topic = f'/topic_arm_joints_clear_error_{self._suffix}'
         self._full_reset_topic = f'/control_reset_{self._suffix}'
         self._sync_session_service = (
-            f'/control_independent_sync_session_{self._suffix}'
+            f'/control_independent_sync_hold_session_{self._suffix}'
+            if bool(self.get_parameter('sync_hold_only_enable').value)
+            else f'/control_independent_sync_session_{self._suffix}'
         )
         self._sync_session_heartbeat_topic = (
             f'/control_independent_sync_heartbeat_{self._suffix}'
@@ -472,6 +483,10 @@ class IndependentArmController(Node):
             latest_sample_qos()
         )
         self.create_subscription(
+            String, '/openarmx_teleop_vr_306_v4/task_head_target',
+            self._on_task_head_target, reliable_latest_qos()
+        )
+        self.create_subscription(
             String, heartbeat_topic, self._on_teleop_heartbeat,
             latest_sample_qos()
         )
@@ -518,6 +533,10 @@ class IndependentArmController(Node):
             Trigger,
             '/openarmx_teleop_vr_306_v4/quick_reset',
             self._on_quick_reset,
+        )
+        self.create_service(
+            Trigger, '/openarmx_teleop_vr_306_v4/quick_reset_hold_grippers',
+            self._on_hold_gripper_reset,
         )
         self.create_service(
             SetBool,
@@ -627,6 +646,7 @@ class IndependentArmController(Node):
             'hardware_session_mode': 'sync',
             'arm_enable_prepare_wait_seconds': 1.5,
             'require_sync_session_service': True,
+            'sync_hold_only_enable': False,
             'sync_session_request_timeout_sec': 6.0,
             'require_joint_enable_subscribers': True,
             'output_guard_period_sec': 0.50,
@@ -935,6 +955,7 @@ class IndependentArmController(Node):
 
     def _lock_head_follow_for_control_boundary_locked(self):
         """Drop head-follow ownership at a validated enable/reset boundary."""
+        self._cancel_task_head_locked('reset')
         if not bool(
             self.get_parameter('lock_head_follow_on_enable_reset').value
         ):
@@ -964,6 +985,11 @@ class IndependentArmController(Node):
         self._target_time = 0.0
         self._target_source = 'fresh_session_measured_hold'
         self._last_ik = None
+        if self._waist_follow_enabled and self._waist_follow_profile == 'forward_pitch_only':
+            waist = np.asarray(groups['leg_waist'], dtype=float)
+            self._waist_follow_neutral_pitch_deg = float(waist[2])
+            self._waist_follow_locked_yaw_deg = float(waist[3])
+            self._waist_follow_pitch_target_deg = float(waist[2])
 
     def _measured_velocity_vector(self):
         """Return fresh vendor joint-speed feedback in controller order."""
@@ -1089,11 +1115,15 @@ class IndependentArmController(Node):
 
         X+A and post-enable reset both command the configured neck default, so
         all three neck axes are completion gates together with both arms.
-        Legs and waist are held at the pose measured at the reset boundary.
+        X+A includes the three coordinated height joints. Y+B keeps those
+        goals at their measured values, so it does not request standing up.
         This prevents active head-follow from taking over before the physical
         neck has actually reached its reset pose.
         """
-        return IndependentArmController._reset_vector(groups)
+        return np.concatenate([
+            IndependentArmController._reset_vector(groups),
+            np.asarray(groups['leg_waist'], dtype=float)[:3],
+        ])
 
     def _configuration_guard_error(
         self, groups, label, *, limit_joint_names=None
@@ -1171,6 +1201,8 @@ class IndependentArmController(Node):
 
     def _prepare_quick_reset_path(self, measured_groups, goal_groups):
         """Validate the complete direct reset sweep before motion."""
+        if not self._kinematics.collision_available:
+            return 'quick reset collision model is unavailable; no motion started', None
         start = self._group_vector(measured_groups).astype(float, copy=True)
         goal = self._group_vector(goal_groups).astype(float, copy=True)
         sample_count = max(
@@ -1203,7 +1235,7 @@ class IndependentArmController(Node):
             guard_error, q = self._configuration_guard_error(
                 groups,
                 'quick reset direct path',
-                limit_joint_names=ARM_JOINT_NAMES,
+                limit_joint_names=ARM_JOINT_NAMES + list(BODY_HEIGHT_JOINT_NAMES),
             )
             if guard_error:
                 return f'direct quick-reset path is unsafe: {guard_error}', None
@@ -1530,15 +1562,13 @@ class IndependentArmController(Node):
             waist_pitch_target = None
             waist_yaw_target = None
             if waist_follow_enabled and waist_follow_profile == 'forward_pitch_only':
-                # Solve the arms in a virtual upright torso, then layer waist
+                # Solve the arms at the current body-height neutral, then layer waist
                 # pitch onto the accepted joint groups below. Solving against
                 # the already-leaning torso makes IK retract/bend the arms to
                 # keep the EEF fixed in base coordinates.
                 measured_waist = np.asarray(groups['leg_waist'], dtype=float)
                 if waist_neutral_pitch is None:
-                    waist_neutral_pitch = float(self.get_parameter(
-                        'waist_forward_assist_upright_pitch_deg'
-                    ).value)
+                    waist_neutral_pitch = float(measured_waist[2])
                 if waist_locked_yaw is None:
                     waist_locked_yaw = float(measured_waist[3])
                 with self._lock:
@@ -1559,7 +1589,10 @@ class IndependentArmController(Node):
                         'waist_forward_assist_start_extension_m').value,
                     self.get_parameter(
                         'waist_forward_assist_full_extension_m').value,
-                    self.get_parameter('waist_forward_assist_max_lean_deg').value,
+                    min(float(self.get_parameter('waist_forward_assist_max_lean_deg').value),
+                        max(0.0, float(np.rad2deg(self._ik_kinematics.upper[
+                            self._ik_kinematics.joint_q['Joint_Waist_Pitch']]))
+                            - waist_neutral_pitch)),
                     self.get_parameter(
                         'waist_forward_assist_upright_pitch_deg'
                     ).value,
@@ -1977,6 +2010,7 @@ class IndependentArmController(Node):
         self._body_height_active = False
         self._body_height_watchdog_stopped = False
         self._body_height_joint_targets = None
+        self._body_height_input_absolute = False
         self._body_height_command_time = 0.0
         self._body_height_update_time = 0.0
         self._body_height_command_progress = None
@@ -2000,7 +2034,7 @@ class IndependentArmController(Node):
         if stale and not self._body_height_watchdog_stopped:
             held = np.asarray(feedback.as_dict()['leg_waist'][:3], dtype=float).copy()
             self._body_height_joint_targets = held
-            self._body_height_lowering_m = estimate_body_lowering((*held, 0.0))
+            self._body_height_lowering_m = estimate_body_lowering((*held, 0.0), signed=True)
             self._body_height_command_progress = (
                 self._body_height_lowering_m / MAX_BODY_LOWERING_M)
             self._body_height_last_direction = 0.0
@@ -2019,6 +2053,8 @@ class IndependentArmController(Node):
                 and self._waist_follow_neutral_pitch_deg is not None):
             target[2] += max(0.0, float(self._waist_follow_pitch_target_deg)
                              - float(self._waist_follow_neutral_pitch_deg))
+            target[2] = min(target[2], float(np.rad2deg(self._kinematics.upper[
+                self._kinematics.joint_q['Joint_Waist_Pitch']])))
         return target
 
     def _on_body_height_command(self, message):
@@ -2033,10 +2069,23 @@ class IndependentArmController(Node):
             enabled = payload.get('enabled') is True
             direction = float(payload.get('direction', 0.0))
             target_level = payload.get('target_level')
+            target_lowering = payload.get('target_lowering_m')
+            reverse_squat = payload.get('reverse_squat', False)
+            if not isinstance(reverse_squat, bool):
+                raise ValueError('reverse_squat must be boolean')
+            if target_lowering is not None:
+                target_lowering = float(target_lowering)
+                maximum = MAX_REVERSE_BODY_LOWERING_M if reverse_squat else MAX_BODY_LOWERING_M
+                if not np.isfinite(target_lowering) or not 0.0 <= target_lowering <= maximum:
+                    raise ValueError('body-height target_lowering_m is outside the supported range')
+                if reverse_squat:
+                    target_lowering = -target_lowering
             if target_level is not None:
                 target_level = int(target_level)
                 if target_level < 1 or target_level > 5:
                     raise ValueError('body-height target_level must be within [1, 5]')
+                if target_lowering is None:
+                    target_lowering = MAX_BODY_LOWERING_M * (5 - target_level) / 4.0
             if not np.isfinite(direction) or abs(direction) > 1.0:
                 raise ValueError('body-height direction must be within [-1, 1]')
         except Exception as exc:
@@ -2092,17 +2141,34 @@ class IndependentArmController(Node):
                 key: np.asarray(value, dtype=float).copy()
                 for key, value in base.items()
             }
-            if not self._body_height_active:
+            entering_manual = (target_lowering is None
+                               and getattr(self, '_body_height_input_absolute', False))
+            new_manual_press = (target_lowering is None and (
+                entering_manual or not self._body_height_active
+                or (abs(self._body_height_last_direction) <= 1.e-6 and abs(direction) > 1.e-6)))
+            if not self._body_height_active or entering_manual:
                 self._body_height_lowering_m = estimate_body_lowering(
-                    (*feedback_height, feedback_groups['leg_waist'][3])
+                    (*feedback_height, feedback_groups['leg_waist'][3]), signed=True
                 )
                 self._body_height_command_progress = (
                     float(self._body_height_lowering_m) / MAX_BODY_LOWERING_M
                 )
                 self._body_height_active = True
                 self._body_height_update_time = now
-            if target_level is not None:
-                target_lowering = MAX_BODY_LOWERING_M * (5 - target_level) / 4.0
+                self._body_height_joint_targets = feedback_height.copy()
+            if target_lowering is not None:
+                # Every absolute task specifies its branch; missing reverse
+                # means normal, never inherit the preceding reverse task.
+                self._body_height_reverse_mode = bool(reverse_squat)
+            elif new_manual_press:
+                self._body_height_reverse_mode = measured_reverse_squat(
+                    feedback_height, getattr(self, '_body_height_reverse_mode', False))
+            self._body_height_input_absolute = target_lowering is not None
+            if target_lowering is None and getattr(self, '_body_height_reverse_mode', False):
+                # Latch direction through standing instead of flipping on an
+                # ahead-of-feedback reference or waist-assist encoder noise.
+                direction = -direction
+            if target_lowering is not None:
                 target_error = target_lowering - float(self._body_height_lowering_m)
                 if abs(target_error) <= 0.002:
                     direction = 0.0
@@ -2124,7 +2190,7 @@ class IndependentArmController(Node):
                     'body_height_motion_command_lead_deg').value),
             )
             moving = abs(direction) > 1.0e-6
-            if not moving:
+            if not moving and target_lowering is None:
                 # A key release is a stop request, not merely a request to stop
                 # advancing the distant target. Rebase once at fresh measured
                 # joints so the vendor position loop has no old error left to
@@ -2137,7 +2203,7 @@ class IndependentArmController(Node):
                         feedback_height, dtype=float
                     ).copy()
                     self._body_height_lowering_m = estimate_body_lowering(
-                        (*feedback_height, feedback_groups['leg_waist'][3])
+                        (*feedback_height, feedback_groups['leg_waist'][3]), signed=True
                     )
                     self._body_height_command_progress = (
                         float(self._body_height_lowering_m)
@@ -2149,6 +2215,12 @@ class IndependentArmController(Node):
                     ).copy()
                 self._body_height_command_lead_deg = hold_lead
             else:
+                # An absolute height goal remains owned until the measured
+                # body reaches it. Reference convergence (direction == 0)
+                # must NOT run the manual key-release/rebase branch above:
+                # that freezes lagging joints short of the requested height.
+                # Keep the bounded coordinated profile advancing to the same
+                # reference while encoders catch up; watchdogs still apply.
                 lead_step = max(
                     0.0,
                     float(self.get_parameter(
@@ -2178,10 +2250,23 @@ class IndependentArmController(Node):
                     MAX_BODY_LOWERING_M,
                     MAX_BODY_LOWERING_M * maximum_scale,
                 )
+                reverse_scale = min(
+                    max(0.0, -np.rad2deg(self._kinematics.lower[
+                        self._kinematics.joint_q[name]]) / maximum)
+                    for name, maximum in zip(BODY_HEIGHT_JOINT_NAMES, BODY_HEIGHT_MAXIMUM_DEG)
+                )
+                minimum_lowering = -min(MAX_REVERSE_BODY_LOWERING_M,
+                                        MAX_BODY_LOWERING_M * reverse_scale)
+                if target_lowering is None:
+                    # Manual keys cannot cross standing into the other squat branch.
+                    if getattr(self, '_body_height_reverse_mode', False):
+                        maximum_lowering = 0.0
+                    else:
+                        minimum_lowering = 0.0
                 self._body_height_lowering_m = min(
                     maximum_lowering,
                     max(
-                        0.0,
+                        minimum_lowering,
                         float(self._body_height_lowering_m)
                         + direction * rate * dt,
                     ),
@@ -2192,11 +2277,15 @@ class IndependentArmController(Node):
                         feedback_height,
                         self._body_height_command_progress,
                         self._body_height_command_lead_deg,
+                        allow_reverse=True,
                     )
                 )
                 targets = np.asarray(targets, dtype=float)
             self._body_height_last_direction = direction
             groups['leg_waist'][0:3] = targets
+            waist_assist_delta = min(waist_assist_delta, max(0.0,
+                float(np.rad2deg(self._kinematics.upper[
+                    self._kinematics.joint_q['Joint_Waist_Pitch']])) - float(targets[2])))
             if waist_assist_delta > 0.0:
                 # Keep the active reach-assist contribution while height owns
                 # the baseline. This prevents the 50 Hz height callback from
@@ -2230,6 +2319,79 @@ class IndependentArmController(Node):
                     f'body height target: lowering '
                     f'{self._body_height_lowering_m:.3f} m'
                 )
+
+    def _cancel_task_head_locked(self, reason='stopped'):
+        self._task_head_cancelled_id = getattr(self, '_task_head_request_id', '')
+        self._task_head_cancel_reason = reason
+        self._task_head_target = None
+        self._task_head_target_time = 0.0
+
+    def _on_task_head_target(self, message):
+        """Bounded task preset; never enables hardware or HMD tracking."""
+        now = time.monotonic()
+        try:
+            payload = json.loads(message.data)
+            request_id = str(payload['request_id'])
+            if not request_id or len(request_id) > 100:
+                raise ValueError('invalid task head request id')
+            enabled = payload.get('enabled') is True
+            pitch = float(payload.get('head_pitch_deg', 0))
+            if not np.isfinite(pitch) or not 0 <= pitch <= 45:
+                raise ValueError('task head pitch must be within 0..45 degrees')
+        except Exception as exc:
+            with self._lock:
+                self._reason = f'task head rejected: {exc}'
+            return
+        with self._lock:
+            if not enabled:
+                if request_id == self._task_head_request_id:
+                    self._cancel_task_head_locked()
+                return
+            if request_id == self._task_head_cancelled_id:
+                return
+            if (self._head_follow_enabled or self._reset_active or self._enable_pending
+                    or self._estop_latched or not self._hardware_enabled):
+                self._task_head_cancelled_id = request_id
+                self._task_head_cancel_reason = (
+                    'head_tracking' if self._head_follow_enabled else
+                    'reset' if self._reset_active else
+                    'enabling' if self._enable_pending else
+                    'estop' if self._estop_latched else 'hardware_disabled')
+                self._task_head_target = None
+                return
+            if self._feedback is None or now - self._feedback_time > float(
+                    self.get_parameter('feedback_timeout_sec').value):
+                return
+            # Config is positive downward; model/vendor pitch is negative.
+            # Preserve roll/yaw, which the task did not request changing.
+            target = np.asarray(self._feedback.neck, dtype=float).copy()
+            idx = self._kinematics.joint_q['Joint_Neck_Pitch']
+            lower = float(np.rad2deg(self._kinematics.lower[idx]))
+            upper = float(np.rad2deg(self._kinematics.upper[idx]))
+            if not np.isfinite(lower) or not np.isfinite(upper) or not lower <= 0 <= upper:
+                self._task_head_cancelled_id = request_id
+                self._task_head_cancel_reason = 'invalid_neck_limits'
+                self._task_head_target = None
+                return
+            # User range is the nominal URDF range. Keep the existing soft
+            # margin (283: 45 degrees nominal minus 2 degrees protection).
+            # A valid nominal request at the boundary saturates safely; it is
+            # not a takeover/reset failure. Report the exact applied target so
+            # the task coordinator verifies encoders against that same value.
+            target[1] = float(np.clip(-pitch, lower, upper))
+            effective = -float(target[1])
+            if request_id != self._task_head_request_id:
+                self.get_logger().info(
+                    f'task head preset: id={request_id}, requested={pitch:.3f}deg, '
+                    f'effective={effective:.3f}deg, safe_max={-lower:.3f}deg')
+            self._task_head_goal = {
+                'request_id': request_id, 'requested_deg': pitch,
+                'effective_deg': effective, 'safe_max_deg': -lower,
+            }
+            self._task_head_cancel_reason = ''
+            self._task_head_target = target
+            self._task_head_target_time = now
+            self._task_head_request_id = request_id
 
     def _on_head_target(self, message):
         """Accept a separately-clocked neck target from live WebXR head pose."""
@@ -2438,6 +2600,42 @@ class IndependentArmController(Node):
 
     def _run_full_reset_enable(self, now, feedback):
         """Run the official full-body reset, then safely claim command output."""
+        if self._enable_stage == 'release_sync_before_reset':
+            # The vendor gates /control_reset while a previous SYNC lease is
+            # active. Await its hold-and-release acknowledgement before reset.
+            if not self._sync_session_client.service_is_ready():
+                self._set_hardware_fault('vendor SYNC release service is unavailable')
+                return True
+            try:
+                self._sync_session_future = self._sync_session_client.call_async(SetBool.Request(data=False))
+            except Exception as exc:
+                self._set_hardware_fault(f'cannot prepare system reset: {exc}')
+                return True
+            self._sync_session_acquired = False
+            self._enable_stage = 'wait_sync_release_before_reset'
+            self._enable_stage_started = now
+            return True
+
+        if self._enable_stage == 'wait_sync_release_before_reset':
+            future = self._sync_session_future
+            if now - self._enable_stage_started > float(self.get_parameter('sync_session_request_timeout_sec').value):
+                self._set_hardware_fault('vendor SYNC release timed out; system reset not sent')
+                return True
+            if future is None or not future.done():
+                self._reason = 'waiting for vendor hold-and-release before system reset'
+                return True
+            try:
+                result = future.result()
+                if result is None or not result.success:
+                    raise RuntimeError('empty response' if result is None else result.message)
+            except Exception as exc:
+                self._set_hardware_fault(f'vendor SYNC release failed; system reset not sent: {exc}')
+                return True
+            self._sync_session_future = None
+            self._enable_stage = 'wait_full_reset_subscriber'
+            self._enable_stage_started = now
+            return True
+
         if self._enable_stage == 'wait_full_reset_subscriber':
             if self._full_reset_pub is None:
                 self._set_hardware_fault('full-body reset publisher is unavailable')
@@ -2516,6 +2714,35 @@ class IndependentArmController(Node):
             return True
 
         if self._enable_stage == 'wait_full_reset_quiet':
+            if str(self.get_parameter('hardware_session_mode').value).lower() == 'sync':
+                # The official reset has already enabled and positioned the
+                # whole body. Claim SYNC from this settled pose; never call the
+                # legacy prepare callback or run a second reset trajectory.
+                arbitration_error = self._active_command_guard_error(now)
+                if arbitration_error:
+                    self._reason = 'system reset complete; waiting for command ownership: ' + arbitration_error
+                    return True
+                current = feedback.as_dict()
+                pose_error, _ = self._configuration_guard_error(
+                    current, 'measured pose after system reset',
+                    limit_joint_names=TELEOP_LIMIT_JOINT_NAMES,
+                )
+                if pose_error:
+                    self._set_hardware_fault(pose_error)
+                    return True
+                try:
+                    self._begin_fresh_teleop_session_locked(current)
+                    self._enable_hold_groups = {
+                        key: np.asarray(value, dtype=float).copy()
+                        for key, value in current.items()
+                    }
+                except Exception as exc:
+                    self._set_hardware_fault(f'system reset hold initialization failed: {exc}')
+                    return True
+                self._enable_stage = 'hold_before_enable'
+                self._enable_stage_started = now
+                self._reason = 'system reset complete; acquiring SYNC at the settled pose'
+                return True
             guard_error = self._hardware_output_guard_error(require_prepare=True)
             self._last_output_guard_check = now
             if guard_error:
@@ -2599,7 +2826,7 @@ class IndependentArmController(Node):
         self._reason = 'full-body reset completed; teleop hardware is enabled'
         return False
 
-    def _start_quick_reset_locked(self, now, feedback, *, source='quick_reset'):
+    def _start_quick_reset_locked(self, now, feedback, *, source='quick_reset', preserve_grippers=False):
         """Start the shared X+A/enable reset trajectory while holding the lock."""
         measured_groups = {
             key: np.asarray(value, dtype=float).copy()
@@ -2636,15 +2863,18 @@ class IndependentArmController(Node):
         groups['left_arm'] = left
         groups['right_arm'] = right
         groups['neck'] = neck
+        # Both arm-reset chords preserve the measured body pose, including
+        # forward/reverse crouch and torso yaw. Standing is a height command,
+        # not a side effect of an arm/head reset.
         guard_error, q = self._configuration_guard_error(
             groups,
             'quick reset target',
-            limit_joint_names=ARM_JOINT_NAMES,
+            limit_joint_names=ARM_JOINT_NAMES + list(BODY_HEIGHT_JOINT_NAMES),
         )
         if guard_error:
             return guard_error
         clamped = self._kinematics.groups_from_q_deg(q, groups)
-        open_grippers = bool(
+        open_grippers = not preserve_grippers and bool(
             self.get_parameter('quick_reset_open_grippers').value
         )
         open_position = None
@@ -2697,22 +2927,26 @@ class IndependentArmController(Node):
         self._reset_path_elapsed_sec = 0.0
         self._target_groups = clamped
         # X+A owns the control boundary now. Release body-height ownership
-        # before RESETTING becomes visible, while retaining the measured
-        # ankle/knee/waist target contained in ``clamped``.
+        # before RESETTING becomes visible. The selected reset path now owns
+        # ankle/knee/waist, preventing height-stream or stale IK interference.
         self._deactivate_body_height_locked()
+        self._body_height_reverse_mode = measured_reverse_squat(
+            measured_groups['leg_waist'],
+            previous=bool(getattr(self, '_body_height_reverse_mode', False)),
+        )
         self._target_time = now
         self._target_source = str(source)
         if (
             self._waist_follow_enabled
             and self._waist_follow_profile == 'forward_pitch_only'
         ):
-            # Quick reset does not move the waist.  Rebase assistance to the
-            # preserved measured pose so the first post-reset arm frame cannot
+            # Rebase assistance to the reset goal so the first post-reset frame cannot
             # pull the torso toward an unrelated upright target.
             self._waist_follow_neutral_pitch_deg = float(
                 clamped['leg_waist'][2]
             )
             self._waist_follow_locked_yaw_deg = float(clamped['leg_waist'][3])
+            self._waist_follow_pitch_target_deg = float(clamped['leg_waist'][2])
         self._velocity_active_sides = {'left', 'right'}
         self._reset_active = True
         self._reset_started = now
@@ -2733,6 +2967,12 @@ class IndependentArmController(Node):
         return ''
 
     def _on_quick_reset(self, _request, response):
+        return self._request_quick_reset(response, preserve_grippers=False)
+
+    def _on_hold_gripper_reset(self, _request, response):
+        return self._request_quick_reset(response, preserve_grippers=True)
+
+    def _request_quick_reset(self, response, preserve_grippers=False):
         now = time.monotonic()
         with self._lock:
             feedback = self._feedback
@@ -2757,7 +2997,10 @@ class IndependentArmController(Node):
                 response.success = False
                 response.message = 'fresh joint feedback is required for quick reset'
                 return response
-            error = self._start_quick_reset_locked(now, feedback)
+            error = self._start_quick_reset_locked(
+                now, feedback, preserve_grippers=preserve_grippers,
+                source='hold_gripper_reset' if preserve_grippers else 'quick_reset',
+            )
             if error:
                 response.success = False
                 response.message = error
@@ -2808,6 +3051,7 @@ class IndependentArmController(Node):
                 )
                 if self._feedback is not None:
                     waist = np.asarray(self._feedback.leg_waist, dtype=float)
+                    self._waist_follow_neutral_pitch_deg = float(waist[2])
                     self._waist_follow_locked_yaw_deg = float(waist[3])
                 self._waist_follow_anchor_x = {'left': None, 'right': None}
                 self._waist_follow_extension_m = 0.0
@@ -2861,6 +3105,7 @@ class IndependentArmController(Node):
                     )
                     return response
             self._head_follow_enabled = enabled
+            self._cancel_task_head_locked('head_mode_changed')
             self._head_target = None
             self._head_target_time = 0.0
             self._reason = (
@@ -2928,6 +3173,8 @@ class IndependentArmController(Node):
             return True
         if bool(self.get_parameter('reset_before_hardware_enable').value) and (
             self._enable_stage in (
+                'release_sync_before_reset',
+                'wait_sync_release_before_reset',
                 'wait_full_reset_subscriber',
                 'wait_full_reset',
                 'wait_full_reset_quiet',
@@ -3295,7 +3542,8 @@ class IndependentArmController(Node):
         self._enable_last_feedback_groups = None
         self._enable_post_sync_rebased = False
         self._hardware_enabled = True
-        if bool(self.get_parameter('quick_reset_after_hardware_enable').value):
+        if (bool(self.get_parameter('quick_reset_after_hardware_enable').value)
+                and not bool(self.get_parameter('reset_before_hardware_enable').value)):
             error = self._start_quick_reset_locked(
                 now, feedback, source='enable_quick_reset'
             )
@@ -3336,6 +3584,13 @@ class IndependentArmController(Node):
             self._set_hardware_fault(
                 f'failed to rebase post-session hold pose: {exc}'
             )
+            return True
+        if label == 'guarded SYNC entry':
+            # Vendor SYNC acquisition already clears/enables joints and turns
+            # on the PID loop. Repeating clear/enable can restart motor ramps.
+            self._enable_stage = 'settling'
+            self._enable_stage_started = now
+            self._reason = 'SYNC acquired; verifying the single system-reset pose'
             return True
         try:
             self._joint_clear_error_pub.publish(String(data=json.dumps(
@@ -3510,7 +3765,8 @@ class IndependentArmController(Node):
             self._enable_started = now
             self._enable_stage_started = now
             self._enable_stage = (
-                'wait_full_reset_subscriber'
+                ('release_sync_before_reset' if session_mode == 'sync'
+                 else 'wait_full_reset_subscriber')
                 if reset_before_enable
                 else 'hold_before_enable'
             )
@@ -3809,6 +4065,14 @@ class IndependentArmController(Node):
                     self.get_parameter('head_target_timeout_sec').value
                 )
             )
+            task_head_fresh = (
+                not self._head_follow_enabled and not self._reset_active
+                and not self._enable_pending
+                and self._task_head_target is not None
+                and now - self._task_head_target_time <= 0.6
+            )
+            head_command = self._head_target if head_target_fresh else self._task_head_target
+            head_target_fresh = head_target_fresh or task_head_fresh
             if self._reset_active:
                 # Quick reset owns the neck target.  The former generic
                 # "stale HMD -> hold measured neck" fallback overwrote the
@@ -3817,7 +4081,7 @@ class IndependentArmController(Node):
                 # reset inevitably timed out.
                 pass
             elif head_target_fresh:
-                desired[18:21] = self._head_target
+                desired[18:21] = head_command
             else:
                 # Do not chase a stale headset sample.  Holding measured neck
                 # feedback is independent from the arm target watchdog.
@@ -3831,11 +4095,17 @@ class IndependentArmController(Node):
                 # Advance from control-cycle time rather than wall time. A
                 # stalled process therefore resumes smoothly instead of
                 # jumping several degrees on the next command packet.
-                self._reset_path_elapsed_sec += min(max(float(dt), 0.0), 0.05)
+                previous_progress = self._reset_path_elapsed_sec / self._reset_path_duration_sec
                 path_progress = min(
                     1.0,
-                    self._reset_path_elapsed_sec / self._reset_path_duration_sec,
+                    previous_progress + min(max(float(dt), 0.0), 0.05) / self._reset_path_duration_sec,
                 )
+                path_progress = feedback_bounded_reset_progress(
+                    self._reset_path_start, self._reset_path_goal, current_vector,
+                    previous_progress, path_progress,
+                    float(self.get_parameter('quick_reset_waist_max_command_lead_deg').value),
+                )
+                self._reset_path_elapsed_sec = path_progress * self._reset_path_duration_sec
                 desired = continuous_direct_reset(
                     self._reset_path_start,
                     self._reset_path_goal,
@@ -3868,7 +4138,7 @@ class IndependentArmController(Node):
                 # clocks.  A released hand must stop the arms without stopping
                 # a still-fresh, explicitly enabled head-follow stream.
                 if head_target_fresh:
-                    desired[18:21] = self._head_target
+                    desired[18:21] = head_command
                 if (
                     not body_height_output_active
                     and
@@ -3932,12 +4202,14 @@ class IndependentArmController(Node):
                 maximum_lead[2:4] = float(
                     self.get_parameter(waist_lead_parameter).value
                 )
+                if self._reset_active:
+                    maximum_lead[0:3] = float(self.get_parameter(waist_lead_parameter).value)
                 if body_height_output_active:
                     # Height control is a single three-joint mechanism. Apply
                     # the same live feedback window to ankle, knee and waist
                     # pitch instead of constraining only waist pitch.
                     maximum_lead[0:3] = body_height_output_lead
-                if waist_assist_output_active:
+                if waist_assist_output_active and not self._reset_active:
                     # Forward reach is a separate waist-pitch contribution.
                     # Do not let the tight stopped-height hold window delay it;
                     # ankle and knee remain on the coordinated height window.
@@ -4228,9 +4500,15 @@ class IndependentArmController(Node):
                     self._reason = (
                         'quick reset completed; release both grips before re-clutching'
                     )
+                # Physical height travel is slower than the arm reference.
+                # Use the same conservative 2 cm/s budget as task-height
+                # control, retaining a finite timeout and feedback completion.
                 elif now - self._reset_started > max(
                         0.1,
-                        float(self.get_parameter('quick_reset_timeout_sec').value)):
+                        float(self.get_parameter('quick_reset_timeout_sec').value)
+                        + MAX_BODY_LOWERING_M / 0.02 * float(np.max(np.abs(
+                            (self._reset_path_goal[:3] - self._reset_path_start[:3])
+                            / np.asarray(BODY_HEIGHT_MAXIMUM_DEG))))):
                     actual_difference = np.abs(
                         reset_goal - self._reset_required_vector(feedback.as_dict())
                     )
@@ -4383,6 +4661,21 @@ class IndependentArmController(Node):
                             self._gripper_dirty[side] = False
             self._publish_status(now, feedback_age, target_age, tracking_error)
 
+    def _measured_body_lowering_m(self, signed=False):
+        if self._feedback is None:
+            return None
+        joints = np.asarray(self._feedback.as_dict()['leg_waist'], dtype=float).copy()
+        if joints.shape != (4,) or not np.all(np.isfinite(joints)):
+            return None
+        if (self._waist_follow_enabled
+                and self._waist_follow_profile == 'forward_pitch_only'
+                and self._waist_follow_neutral_pitch_deg is not None
+                and self._waist_follow_pitch_target_deg is not None):
+            joints[2] -= max(0.0, self._waist_follow_pitch_target_deg
+                            - self._waist_follow_neutral_pitch_deg)
+        value = estimate_body_lowering(joints, signed=True)
+        return value if signed else abs(value)
+
     def _publish_status(self, now, feedback_age, target_age, tracking_error=None):
         if now - self._last_status < 0.10:
             return
@@ -4438,7 +4731,12 @@ class IndependentArmController(Node):
                     None if self._body_height_joint_targets is None
                     else self._body_height_joint_targets.tolist()
                 ),
-                'lowering_m': self._body_height_lowering_m,
+                'lowering_m': (None if self._body_height_lowering_m is None else abs(self._body_height_lowering_m)),
+                'measured_lowering_m': self._measured_body_lowering_m(),
+                'measured_signed_lowering_m': self._measured_body_lowering_m(signed=True),
+                'feedback_time_monotonic': self._feedback_time,
+                'feedback_fresh': self._feedback is not None and feedback_age <= float(
+                    self.get_parameter('feedback_timeout_sec').value),
                 'command_progress': self._body_height_command_progress,
                 'command_lead_deg': self._body_height_command_lead_deg,
                 'direction': self._body_height_last_direction,
@@ -4448,6 +4746,9 @@ class IndependentArmController(Node):
                 ),
             },
             'head_follow_enabled': self._head_follow_enabled,
+            'task_head_cancelled_id': self._task_head_cancelled_id,
+            'task_head_cancel_reason': self._task_head_cancel_reason,
+            'task_head_goal': self._task_head_goal,
             'clutch_session': self._clutch_session,
             'clutch_sequence': self._clutch_sequence,
             'clutch_held_sides': sorted(self._grip_release_held),

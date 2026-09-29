@@ -28,7 +28,7 @@ def test_controller_has_watchdog_guarded_navigation_only_height_path():
     assert "'body_height_command_lead_slew_deg_sec': 60.0" in source
     assert 'maximum_lead[0:3] = body_height_output_lead' in source
     assert "'waist_forward_assist_command_lead_deg': 8.0" in source
-    assert 'if waist_assist_output_active:' in source
+    assert 'if waist_assist_output_active and not self._reset_active:' in source
     assert 'maximum_lead[2], waist_assist_output_lead' in source
     assert 'def _on_body_height_command' in source
     assert 'not self._hardware_enabled' in source

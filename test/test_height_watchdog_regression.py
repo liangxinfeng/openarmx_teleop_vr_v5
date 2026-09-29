@@ -10,8 +10,8 @@ import time
 
 import numpy as np
 from openarmx_teleop_vr_306_v4.body_height import (
-    MAX_BODY_LOWERING_M, BODY_HEIGHT_JOINT_NAMES, BODY_HEIGHT_MAXIMUM_DEG,
-    estimate_body_lowering, coordinated_body_height_targets,
+    MAX_BODY_LOWERING_M, MAX_REVERSE_BODY_LOWERING_M, BODY_HEIGHT_JOINT_NAMES, BODY_HEIGHT_MAXIMUM_DEG,
+    estimate_body_lowering, coordinated_body_height_targets, measured_reverse_squat,
 )
 
 SOURCE = Path(os.environ.get('HEIGHT_CONTROLLER_SOURCE',
@@ -54,7 +54,7 @@ class Harness:
         self._waist_follow_neutral_pitch_deg = 8.38
         self._waist_follow_pitch_target_deg = 8.38
         self._target_groups = {'leg_waist': np.array([12.34, 25.17, 13.15, 0.])}
-        self._kinematics = SimpleNamespace(upper=np.deg2rad([76.,155.,81.]),
+        self._kinematics = SimpleNamespace(upper=np.deg2rad([76.,155.,81.]), lower=np.deg2rad([-83.,-153.,-78.]),
             joint_q=dict(zip(BODY_HEIGHT_JOINT_NAMES, range(3))))
         self._configuration_guard_error = lambda *a, **k: ('', None)
         self._target_velocity_estimator = SimpleNamespace(

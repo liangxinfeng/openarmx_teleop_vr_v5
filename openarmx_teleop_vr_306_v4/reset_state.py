@@ -17,6 +17,28 @@ QUICK_BUTTON_KEYS = ('left_x', 'right_a')
 ARM_SIDES = ('left', 'right')
 
 
+@dataclass
+class ClutchedTrigger:
+    """Re-clutching alone must not drop an object held at the last target."""
+    anchor: float | None = None
+    armed: bool = False
+
+    def release(self):
+        self.anchor = None
+        self.armed = False
+
+    def observe(self, value):
+        value = float(value)
+        if not math.isfinite(value) or not 0 <= value <= 1:
+            return None
+        if self.anchor is None:
+            self.anchor = value
+            return None
+        if abs(value - self.anchor) >= 0.025:
+            self.armed = True
+        return value if self.armed else None
+
+
 def _finite_time(value, name):
     timestamp = float(value)
     if not math.isfinite(timestamp):
@@ -29,6 +51,7 @@ class QuickResetState:
     """Track the X+A gesture and one generation-guarded service request."""
 
     request_timeout_sec: float = 2.0
+    button_keys: tuple = QUICK_BUTTON_KEYS
     buttons: dict = field(default_factory=lambda: {
         'left_x': False,
         'right_a': False,
@@ -41,6 +64,7 @@ class QuickResetState:
     request_deadline: float | None = None
 
     def __post_init__(self):
+        self.buttons = {key: False for key in self.button_keys}
         timeout = float(self.request_timeout_sec)
         if not math.isfinite(timeout) or timeout <= 0.0:
             raise ValueError('request_timeout_sec must be finite and positive')
@@ -52,7 +76,7 @@ class QuickResetState:
 
     def update_button_event(self, key, pressed):
         """Apply a reliable one-button edge without claiming a full snapshot."""
-        if key not in QUICK_BUTTON_KEYS:
+        if key not in self.button_keys:
             raise ValueError(f'unsupported quick-reset button: {key}')
         self.buttons[key] = bool(pressed)
 
@@ -68,8 +92,8 @@ class QuickResetState:
             self.full_input_time = 0.0
             self.chord_started = None
             return
-        self.buttons['left_x'] = bool(left_x)
-        self.buttons['right_a'] = bool(right_a)
+        self.buttons[self.button_keys[0]] = bool(left_x)
+        self.buttons[self.button_keys[1]] = bool(right_a)
         self.full_input_time = timestamp
         if not self.both_pressed:
             self.chord_started = None
@@ -77,7 +101,7 @@ class QuickResetState:
 
     @property
     def both_pressed(self):
-        return self.buttons['left_x'] and self.buttons['right_a']
+        return all(self.buttons[key] for key in self.button_keys)
 
     def input_is_fresh(self, now, maximum_age):
         timestamp = _finite_time(now, 'now')
@@ -157,8 +181,7 @@ class QuickResetState:
         self.full_input_time = 0.0
         self.chord_started = None
         self.chord_consumed = True
-        self.buttons['left_x'] = False
-        self.buttons['right_a'] = False
+        self.buttons = {key: False for key in self.button_keys}
         return invalidated
 
 

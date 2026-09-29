@@ -49,7 +49,7 @@ def conservative_reset_duration(
             arm_velocity, neck_velocity, minimum)):
         raise ValueError('reset duration limits must be finite and positive')
 
-    arm_delta = np.abs(goal[4:18] - start[4:18])
+    arm_delta = np.abs(goal[:18] - start[:18])
     arm_path_rate = 1.875 * arm_delta
     neck_path_rate = 1.875 * np.abs(goal[18:21] - start[18:21])
     return max(
@@ -57,3 +57,35 @@ def conservative_reset_duration(
         float(np.max(arm_path_rate)) / arm_velocity,
         float(np.max(neck_path_rate)) / neck_velocity,
     )
+
+
+def feedback_bounded_reset_progress(start, goal, measured, previous, proposed, lead):
+    """Limit the shared waist/leg path phase by its slowest measured joint.
+
+    All three height joints keep one path parameter. Do not independently
+    accelerate the ankle/waist past a slow knee, or advance time during a stall.
+    Arm-only reset retains its original clock.
+    """
+    start, goal, measured = [np.asarray(v, dtype=float) for v in (start, goal, measured)]
+    if any(v.shape != (21,) or not np.all(np.isfinite(v)) for v in (start, goal, measured)):
+        raise ValueError('reset feedback must contain 21 finite joints')
+    if not all(np.isfinite(v) for v in (previous, proposed, lead)) or lead <= 0:
+        raise ValueError('reset progress and lead must be finite; lead must be positive')
+    previous = float(np.clip(previous, 0, 1))
+    proposed = float(np.clip(proposed, previous, 1))
+    delta = goal[:3] - start[:3]
+    moving = np.abs(delta) > 1.e-6
+    if not np.any(moving):
+        return proposed
+    allowed_blend = np.min(((measured[:3] - start[:3]) / np.where(moving, delta, 1)
+                            + lead / np.maximum(np.abs(delta), 1.e-6))[moving])
+    if smoothstep5(proposed) <= allowed_blend:
+        return proposed
+    low, high = previous, proposed
+    for _ in range(24):
+        mid = (low + high) * .5
+        if smoothstep5(mid) <= allowed_blend:
+            low = mid
+        else:
+            high = mid
+    return low

@@ -1,59 +1,70 @@
-# 云蝶 WebXR 双臂遥操 V4
+> **307当前源码版本 · 2026-09-29**
+> 同步307当前遥操控制、夹爪开度、持物复位、正反向下蹲接管及网页实现。
+> 部署前请阅读 [307版本说明](ROBOT307_VERSION.md)。此分支保留307实际配置，原有main及306分支未改动。
 
-**307机器人当前版本快照，2026-09-09。** 包名沿用 `openarmx_teleop_vr_306_v4`，实际默认话题后缀为 `0_307`，不是306专用配置。
+# openarmx_teleop_vr_306_v4
 
-## 技术链路
+V4 keeps the proven robot-306 transport and hardware boundary from V3, while
+replacing the arm-control middle layer with the design used by the local
+Quest3-Teleoperation project.
 
 ```text
-Quest浏览器手柄 → HTTPS / WebRTC / WSS最新帧
-→ 相邻帧末端增量映射 → Placo QP IK与奇异点相关约束
-→ 关节约束、过期结果检查、掉线保持、控制权管理
-→ 厂商SYNC位置指令 → 厂商CAN层 → DM电机内部位置闭环
+unchanged V3 boundary
+WebXR keys + HTTPS/WebRTC/WSS + newest-frame mailbox
+                         |
+V4 Quest middle          v
+adjacent-frame Cartesian increments
+  -> persistent end-effector targets
+  -> measured-joint refresh on every new target
+  -> Placo one-step QP IK
+  -> manipulability task + kinetic-energy regularization
+                         |
+unchanged V3 boundary    v
+hard limits/watchdogs/arbitration -> vendor SYNC position topic
+  -> vendor CAN worker -> DM motor internal position loop
 ```
 
-本包提供双臂、夹爪、头部/腰部选项、复位以及RGB视频。**厂商硬件服务和电机位置内环不在本仓库中**；与导航组合使用时，由导航包提供网页及额外按键逻辑。
+Only active arm joints are unmasked during each Placo solve. The inactive arm,
+neck, ankle and knee remain at measured feedback; waist pitch/yaw are opened
+only when the inherited UI explicitly enables the IK waist-follow profile.
+Old IK results cannot overwrite
+a newer WebXR frame, Grip release invalidates the old anchor, and stale input
+holds output through V3's fail-closed watchdogs. Quest3 itself does not provide
+complete stale-frame, dropout or collision handling; V4 therefore retains the
+stronger V3 outer guards instead of removing them. SRDF self-collision remains
+an optional controller parameter and is disabled by the inherited supervised
+teleoperation profile.
 
-## 环境与编译
+## Dependency setup
 
-需要Ubuntu 24.04、ROS 2 Jazzy、厂商 `robot_env` Python环境及硬件SDK。Placo使用独立虚拟环境；相机、WebRTC、轨迹生成等依赖还需与原机环境一致，rosdep不能安装厂商SDK。
+Placo 0.9.17 is installed in an isolated environment so V3's robot environment
+is not modified:
 
 ```bash
-mkdir -p ~/ros2_ws/src
-cd ~/ros2_ws/src
-git clone https://github.com/liangxinfeng/openarmx_teleop_vr_306_v4.git
-cd openarmx_teleop_vr_306_v4
+cd /home/ubuntu/ros2_ws/src/openarmx_teleop_vr_306_v4
 bash scripts/setup_v4_placo_env.sh
-cd ~/ros2_ws
-source /opt/ros/jazzy/setup.bash
-rosdep install --from-paths src/openarmx_teleop_vr_306_v4 --ignore-src -r -y
-colcon build --packages-select openarmx_teleop_vr_306_v4
-source install/setup.bash
-ros2 launch openarmx_teleop_vr_306_v4 full_vr_teleop.launch.py \
-  topic_suffix:=0_307 dry_run:=true
 ```
 
-头显访问 `https://<机器人IP>:8446`。先在dry-run检查输入、映射和IK；确认编号、零位、限位、急停和现场安全后，才将 `dry_run:=false`，并在网页主动使能。
+## Dry-run validation
 
-## 配置与迁移
+```bash
+cd /home/ubuntu/ros2_ws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+ros2 launch openarmx_teleop_vr_306_v4 full_vr_teleop.launch.py dry_run:=true
+```
 
-| 内容 | 位置 |
-| --- | --- |
-| 关节、安全和控制参数 | `config/controller.yaml` |
-| 手柄映射与跟随参数 | `config/teleop.yaml` |
-| 启动默认值、端口和DDS | `launch/full_vr_teleop.launch.py` |
-| 机器人模型 | `urdf/`、`meshes/` |
-| Placo环境 | `scripts/setup_v4_placo_env.sh` |
-| 回归测试 | `test/`、`integration/` |
+Open `https://<robot-ip>:8446`. Dry-run runs mapping and IK but does not enable
+or command the real robot.
 
-迁移时不能只改机器人编号：核对模型、关节顺序/方向/限位、厂商服务协议和环境路径。当前监督遥操配置中的自碰撞开关应逐项检查，不能假设所有保护默认启用。
+## Real hardware
 
-不要同时开启V3、V4和导航遥操抢占硬件；导航包已经包含本包，无需另开一套。测试脚本可能需要ROS/SDK，有些会发布控制消息，不应在真机域盲目执行。
+Real-hardware operation is intentionally unchanged from V3:
 
-## 相关项目与许可
+```bash
+ros2 launch openarmx_teleop_vr_306_v4 full_vr_teleop.launch.py dry_run:=false
+```
 
-- [VR导航与任务编排](https://github.com/liangxinfeng/openarmx_teleop_vr_navigation_306)
-- [迁移指南](AI_MIGRATION_GUIDE.md)
-- [原始算法说明](docs/ORIGINAL_README.md)
-- [第三方许可证](THIRD_PARTY_LICENSES.md)、[NOTICE](NOTICE)
-
-保留Quest3-Teleoperation等原有声明，厂商模型和硬件SDK权利不因公开托管而改变。本次为源代码发布，不代表进行了新的真机安全验收。
+The page button logic, X+A reset, head/waist options, gripper behavior, vendor
+SYNC session, position command entry and shutdown behavior are inherited from
+V3. Do not run V3, V4 or the navigation teleop package together in real mode.

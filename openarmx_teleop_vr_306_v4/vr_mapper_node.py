@@ -14,12 +14,14 @@ import uuid
 import numpy as np
 import rclpy
 from rclpy.node import Node
+from rcl_interfaces.msg import SetParametersResult
+from .gripper_aperture import checked_width, load_width, save_width, width_to_motor
 from std_msgs.msg import String
 from std_srvs.srv import SetBool, Trigger
 
 from .desktop_mode import DesktopModeGate, world_to_operator_yaw_rotation
 from .qos import latest_sample_qos
-from .reset_state import GripRearmState, QuickResetState
+from .reset_state import GripRearmState, QuickResetState, ClutchedTrigger
 from .teleop_core import (
     ControllerSample,
     HeadMapper,
@@ -68,6 +70,8 @@ class IndependentVrMapper(Node):
     def __init__(self):
         super().__init__('independent_vr_mapper_306_v4')
         self._declare_parameters()
+        self.declare_parameter('gripper_closed_width_cm', load_width())
+        self.add_on_set_parameters_callback(self._validate_gripper_width)
         self._lock = threading.RLock()
         self._dry_run = bool(self.get_parameter('dry_run').value)
         self._current_poses = {}
@@ -90,14 +94,20 @@ class IndependentVrMapper(Node):
             self.get_parameter('quick_reset_request_timeout_sec').value
         ))
         self._quick_future = None
+        self._hold_reset_state = QuickResetState(
+            request_timeout_sec=self._quick_state.request_timeout_sec,
+            button_keys=('left_y', 'right_b'),
+        )
         self._disable_request_pending = False
         self._gripper_filtered = {'left': None, 'right': None}
         self._gripper_last_sent = {'left': None, 'right': None}
         self._gripper_last_time = {'left': 0.0, 'right': 0.0}
         self._gripper_input_raw = {'left': 0.0, 'right': 0.0}
         self._gripper_input_effective = {'left': 0.0, 'right': 0.0}
+        self._gripper_full_close_latched = {'left': False, 'right': False}
         self._gripper_press_time = {'left': None, 'right': None}
         self._gripper_dual_sync_active = False
+        self._gripper_clutch = {side: ClutchedTrigger() for side in ('left', 'right')}
         self._release_hold_sent = {'left': False, 'right': False}
         self._grip_false_since = {'left': None, 'right': None}
         self._clutch_session = uuid.uuid4().hex
@@ -224,6 +234,7 @@ class IndependentVrMapper(Node):
             SetBool, f'{prefix}/set_hardware_enabled'
         )
         self._reset_client = self.create_client(Trigger, f'{prefix}/quick_reset')
+        self._hold_reset_client = self.create_client(Trigger, f'{prefix}/quick_reset_hold_grippers')
         self._desktop_mode_service = self.create_service(
             SetBool, f'{prefix}/set_desktop_mode', self._on_desktop_mode
         )
@@ -344,8 +355,10 @@ class IndependentVrMapper(Node):
         self._last_targets.pop(side, None)
         self._processed_versions[side] = -1
         self._grip_rearm.set_required(side, require_release)
-        self._gripper_filtered[side] = None
-        self._gripper_last_sent[side] = None
+        self._gripper_clutch[side].release()
+        self._gripper_input_raw[side] = 0.0
+        if hasattr(self, '_gripper_full_close_latched'):
+            self._gripper_full_close_latched[side] = False
         self._gripper_press_time[side] = None
         self._gripper_dual_sync_active = False
         self._grip_false_since[side] = None
@@ -358,6 +371,7 @@ class IndependentVrMapper(Node):
         """Invalidate a pending reset request; caller holds ``self._lock``."""
         future = self._quick_future
         self._quick_state.begin_boundary()
+        self._hold_reset_state.begin_boundary()
         self._quick_future = None
         if future is not None and not future.done():
             future.cancel()
@@ -526,6 +540,10 @@ class IndependentVrMapper(Node):
                     self._quick_state.update_button_event('left_x', pressed)
                 elif hand == 'right' and button == 'A':
                     self._quick_state.update_button_event('right_a', pressed)
+                elif hand == 'left' and button == 'Y':
+                    self._hold_reset_state.update_button_event('left_y', pressed)
+                elif hand == 'right' and button == 'B':
+                    self._hold_reset_state.update_button_event('right_b', pressed)
                 self._last_vr_time = now
             return
         if hand in ('left', 'right') and packet.get('gripReleased'):
@@ -553,7 +571,9 @@ class IndependentVrMapper(Node):
                 sample = self._samples.get(hand)
                 if sample is not None:
                     sample.trigger = 0.0
-                    self._publish_grippers({hand: 0.0}, now, force=True)
+                    # Reliable release is input only. The normal control tick
+                    # owns clutch, freshness, reset and enable checks. Never
+                    # open a loaded gripper after Grip/session release here.
                 self._last_vr_time = now
             return
 
@@ -596,6 +616,11 @@ class IndependentVrMapper(Node):
                 now,
                 both_tracked=left_tracked and right_tracked,
             )
+            self._hold_reset_state.update_full_snapshot(
+                bool(left_packet.get('yButton', 0)),
+                bool(right_packet.get('bButton', 0)), now,
+                both_tracked=left_tracked and right_tracked,
+            )
             if parsed:
                 self._last_vr_time = now
             if head_sample is not None:
@@ -629,9 +654,17 @@ class IndependentVrMapper(Node):
                     self._last_reason = reason
 
     def _check_quick_reset(self, now):
+        if self._quick_state.pending:
+            return self._check_reset_gesture(now, self._quick_state, self._reset_client)
+        if self._hold_reset_state.pending or self._hold_reset_state.both_pressed:
+            self._quick_state.consume_chord()
+            return self._check_reset_gesture(now, self._hold_reset_state, self._hold_reset_client)
+        return self._check_reset_gesture(now, self._quick_state, self._reset_client)
+
+    def _check_reset_gesture(self, now, state, client):
         if not bool(self.get_parameter('quick_reset_enabled').value):
             return False
-        expired = self._quick_state.expire_request(now)
+        expired = state.expire_request(now)
         if expired is not None:
             future = self._quick_future
             self._quick_future = None
@@ -644,7 +677,7 @@ class IndependentVrMapper(Node):
             0.05,
             float(self.get_parameter('quick_reset_input_fresh_sec').value),
         )
-        gesture = self._quick_state.gesture_state(
+        gesture = state.gesture_state(
             now,
             fresh_limit,
             self.get_parameter('quick_reset_hold_seconds').value,
@@ -658,20 +691,20 @@ class IndependentVrMapper(Node):
         backend_dry_run = bool(self._backend_status.get('dry_run', self._dry_run))
         if not self._hardware_enabled and not backend_dry_run:
             self._last_reason = 'quick reset rejected: hardware is not enabled'
-            self._quick_state.consume_chord()
+            state.consume_chord()
             return True
-        if not self._reset_client.service_is_ready():
+        if not client.service_is_ready():
             self._last_reason = 'quick reset service is unavailable'
-            self._quick_state.consume_chord()
+            state.consume_chord()
             return True
         self._release_all(require_release=True)
-        future = self._reset_client.call_async(Trigger.Request())
-        generation = self._quick_state.begin_request(now)
+        future = client.call_async(Trigger.Request())
+        generation = state.begin_request(now)
         self._quick_future = future
 
         def finished(done):
             with self._lock:
-                if not self._quick_state.complete_request(generation):
+                if not state.complete_request(generation):
                     return
                 if self._quick_future is done:
                     self._quick_future = None
@@ -694,7 +727,16 @@ class IndependentVrMapper(Node):
             0.5,
             1.0,
         ))
+        # Separate enter/leave thresholds prevent a held trigger around the
+        # full-close boundary alternating between 360 and ~310 motor degrees.
+        latched = getattr(self, '_gripper_full_close_latched', None)
+        if latched is None:
+            latched = self._gripper_full_close_latched = {'left': False, 'right': False}
         if value >= full_close:
+            latched[side] = True
+        elif value <= max(0.0, full_close - 0.08):
+            latched[side] = False
+        if latched[side]:
             value = 1.0
         return value
 
@@ -753,6 +795,15 @@ class IndependentVrMapper(Node):
             self._gripper_input_effective[side] = value
         return calibrated
 
+    def _validate_gripper_width(self, parameters):
+        try:
+            for parameter in parameters:
+                if parameter.name == 'gripper_closed_width_cm':
+                    save_width(checked_width(parameter.value))
+            return SetParametersResult(successful=True)
+        except (ValueError, TypeError, OSError) as error:
+            return SetParametersResult(successful=False, reason=str(error))
+
     def _publish_grippers(self, triggers, now, force=False):
         if not bool(self.get_parameter('enable_gripper').value):
             return
@@ -765,7 +816,7 @@ class IndependentVrMapper(Node):
             raw = linear_gripper_position(
                 effective[side],
                 self.get_parameter('gripper_open_position').value,
-                self.get_parameter('gripper_closed_position').value,
+                width_to_motor(self.get_parameter('gripper_closed_width_cm').value),
                 self.get_parameter('gripper_trigger_deadzone').value,
             )
             previous = self._gripper_filtered[side]
@@ -1068,7 +1119,9 @@ class IndependentVrMapper(Node):
                     continue
                 targets[side] = target
                 active.append(side)
-                gripper_triggers[side] = sample.trigger
+                trigger = self._gripper_clutch[side].observe(sample.trigger)
+                if trigger is not None:
+                    gripper_triggers[side] = trigger
 
             if gripper_triggers:
                 self._publish_grippers(gripper_triggers, now)

@@ -264,7 +264,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'quick_reset_neck_max_jerk_deg_sec3', default_value='416.667'),
         DeclareLaunchArgument(
-            'quick_reset_neck_joints', default_value='[0.0, 0.0, 0.0]',
+            'quick_reset_neck_joints', default_value='[0.010928,-29.998649,0.010928]',
             description='Quick-reset neck target [roll, pitch, yaw] in degrees.'),
         DeclareLaunchArgument(
             'head_neutral_joints_deg', default_value='[0.0, 0.0, 0.0]',
@@ -286,7 +286,7 @@ def generate_launch_description():
                 '</Discovery></Domain></CycloneDDS>')),
         DeclareLaunchArgument(
             'robot_env_python',
-            default_value='/home/ubuntu/miniconda3/envs/robot_env/bin/python'),
+            default_value='/home/ubuntu/ros2_ws/venvs/openarmx_v4_placo/bin/python'),
         SetEnvironmentVariable('ROS_DOMAIN_ID', ros_domain_id),
         SetEnvironmentVariable('ROS_AUTOMATIC_DISCOVERY_RANGE', 'SUBNET'),
         SetEnvironmentVariable('RMW_IMPLEMENTATION', rmw_implementation),

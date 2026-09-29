@@ -9,6 +9,8 @@ const state = {
   xrSession: null,
   brandHud: null,
   headText: null,
+  vrNotice: null,
+  vrNoticeTimer: null,
   teleop: {
     available: false,
     status: null,
@@ -18,7 +20,9 @@ const state = {
     pollTimer: null,
     lastRequestMessage: '',
     enableAfterFreshVr: false,
-    enableAfterFreshVrDeadline: 0
+    enableAfterFreshVrDeadline: 0,
+    lastHgDaggerMode: null,
+    lastHgDaggerHapticToken: null
   },
   image: {
     enabled: false,
@@ -33,6 +37,87 @@ const state = {
 function setStatus(message) {
   const statusText = document.getElementById('statusText');
   if (statusText) statusText.textContent = message;
+}
+
+function ensureHgDaggerVrNotice() {
+  if (state.vrNotice) return state.vrNotice;
+  const cameraEl = document.querySelector('a-scene')?.camera?.el;
+  if (!cameraEl) return null;
+  const notice = document.createElement('a-text');
+  notice.setAttribute('id', 'hg-dagger-vr-notice');
+  notice.setAttribute('align', 'center');
+  notice.setAttribute('anchor', 'center');
+  notice.setAttribute('baseline', 'center');
+  notice.setAttribute('color', '#7DFFCF');
+  notice.setAttribute('width', '1.35');
+  notice.setAttribute('wrap-count', '28');
+  notice.setAttribute('position', '0 -0.25 -0.8');
+  notice.setAttribute('visible', false);
+  cameraEl.appendChild(notice);
+  state.vrNotice = notice;
+  return notice;
+}
+
+function showHgDaggerVrNotice(message, durationMs = 3500, color = '#7DFFCF') {
+  setStatus(message);
+  const notice = ensureHgDaggerVrNotice();
+  if (!notice) return;
+  if (state.vrNoticeTimer) window.clearTimeout(state.vrNoticeTimer);
+  notice.setAttribute('color', color);
+  notice.setAttribute('value', String(message));
+  notice.setAttribute('visible', true);
+  state.vrNoticeTimer = window.setTimeout(() => {
+    if (state.vrNotice === notice) notice.setAttribute('visible', false);
+    state.vrNoticeTimer = null;
+  }, Math.max(1000, Number(durationMs) || 3500));
+}
+
+function pulseHgDaggerControllers(intensity = 0.7, durationMs = 180) {
+  for (const source of Array.from(state.xrSession?.inputSources || [])) {
+    const actuator = source?.gamepad?.hapticActuators?.[0]
+      || source?.gamepad?.vibrationActuator;
+    try {
+      if (typeof actuator?.pulse === 'function') {
+        void actuator.pulse(intensity, durationMs);
+      } else if (typeof actuator?.playEffect === 'function') {
+        void actuator.playEffect('dual-rumble', {
+          duration: durationMs,
+          strongMagnitude: intensity,
+          weakMagnitude: intensity * 0.6
+        });
+      }
+    } catch (_) { /* Haptics are optional in WebXR runtimes. */ }
+  }
+}
+
+function renderHgDaggerStatus() {
+  const hgDagger = state.teleop.status?.hg_dagger;
+  const mode = String(hgDagger?.mode || '');
+  const hapticToken = hgDagger?.haptic_token;
+  if (!mode) return;
+  if (
+    state.teleop.lastHgDaggerMode === mode
+    && state.teleop.lastHgDaggerHapticToken === hapticToken
+  ) return;
+  const warningModes = new Set([
+    'FAILURE_HOLD', 'EXPERT_RELEASE_REQUIRED', 'ESTOP'
+  ]);
+  showHgDaggerVrNotice(
+    hgDagger.prompt || `HG-DAGGER: ${mode}`,
+    mode === 'EXPERT_RELEASE_REQUIRED' ? 7000 : 4500,
+    warningModes.has(mode) ? '#FFB86B' : '#7DFFCF'
+  );
+  if (
+    state.xrSession
+    && ['EXPERT_RELEASE_REQUIRED', 'EXPERT_READY'].includes(mode)
+  ) {
+    pulseHgDaggerControllers(
+      mode === 'EXPERT_RELEASE_REQUIRED' ? 0.9 : 0.55,
+      mode === 'EXPERT_RELEASE_REQUIRED' ? 260 : 140
+    );
+  }
+  state.teleop.lastHgDaggerMode = mode;
+  state.teleop.lastHgDaggerHapticToken = hapticToken ?? null;
 }
 
 function setServerUrl() {
@@ -165,6 +250,7 @@ async function refreshHardwareStatus() {
     const payload = await response.json();
     state.teleop.available = Boolean(payload.hardwareControlAvailable);
     state.teleop.status = payload.teleop || null;
+    renderHgDaggerStatus();
   } catch (error) {
     state.teleop.available = false;
     state.teleop.status = null;

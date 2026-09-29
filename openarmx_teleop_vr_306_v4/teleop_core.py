@@ -59,10 +59,11 @@ def forward_reach_to_waist_pitch(
         raise ValueError('waist forward-assist maximum lean must be non-negative')
     linear_ratio = min(1.0, max(0.0, (forward_x - start_x) / (full_x - start_x)))
     ratio = linear_ratio * linear_ratio * (3.0 - 2.0 * linear_ratio)
-    # Never command below the calibrated upright limit. This hard boundary
-    # prevents retracted hands from making the body lean backward.
-    baseline = max(neutral, upright)
-    return max(upright, baseline + ratio * maximum_lean)
+    # The neutral is the current coordinated body pose, not an absolute motor
+    # zero. Reverse crouching needs a negative waist pitch to keep the torso
+    # upright. Clamping it to zero bends the torso while the legs stay crouched.
+    # Only the additional reach contribution is non-negative.
+    return neutral + ratio * maximum_lean
 
 
 def forward_limit_with_wrist_reserve(

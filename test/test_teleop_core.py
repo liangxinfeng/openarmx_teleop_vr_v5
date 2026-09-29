@@ -34,8 +34,8 @@ def test_forward_reach_maps_only_to_bounded_positive_waist_pitch():
     assert map_pitch(0.25, 0.0, 0.28, 0.52, 35.0) == pytest.approx(0.0)
     assert map_pitch(0.40, 0.0, 0.28, 0.52, 35.0) == pytest.approx(17.5)
     assert map_pitch(0.60, 0.0, 0.28, 0.52, 35.0) == pytest.approx(35.0)
-    # A backward measured baseline is clamped at the upright boundary.
-    assert map_pitch(0.25, -5.0, 0.28, 0.52, 35.0, 0.0) == pytest.approx(0.0)
+    # A reverse-crouch baseline must not be pulled toward motor zero.
+    assert map_pitch(0.25, -5.0, 0.28, 0.52, 35.0, 0.0) == pytest.approx(-5.0)
 
 
 def test_waist_assist_starts_near_the_end_of_arm_extension():

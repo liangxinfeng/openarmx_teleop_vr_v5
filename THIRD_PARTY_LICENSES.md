@@ -1,5 +1,16 @@
 # Third-party licenses
 
+Current V5 runtime dependencies are separately installed, not vendored here:
+
+- Mink: https://github.com/kevinzakka/mink
+- MuJoCo: https://github.com/google-deepmind/mujoco
+- quadprog: https://github.com/quadprog/quadprog
+- qpsolvers: https://github.com/qpsolvers/qpsolvers
+
+Validated versions are pinned in requirements-mink.txt. Their upstream license
+files remain with the installed distributions; the controller adapter and URDF
+conversion in this package do not copy their implementation code.
+
 ## Quest3-Teleoperation
 
 MIT License

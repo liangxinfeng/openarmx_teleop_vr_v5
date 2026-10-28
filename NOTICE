@@ -12,7 +12,7 @@ The unavailable OpenArmX binary IK/driver is not redistributed. Robot-306
 safety gates, collision checks and motor-topic adaptation are implemented by
 Autolife Robotics and combined here under the same CC BY-NC-SA 4.0 terms.
 
-The incremental Cartesian target and Placo QP IK design in V4 is adapted from
+The incremental Cartesian target and Placo QP IK design in V5 is adapted from
 Quest3-Teleoperation, Copyright (c) 2025 XR Robotics, under the MIT License.
 The original MIT copyright and permission notice is retained in
 THIRD_PARTY_LICENSES.md.

@@ -6,7 +6,7 @@ import numpy as np
 
 MODULE_PATH = (
     Path(__file__).resolve().parents[1]
-    / 'openarmx_teleop_vr_306_v4'
+    / 'openarmx_teleop_vr_306_v5'
     / 'reset_path.py'
 )
 SPEC = importlib.util.spec_from_file_location('reset_path_subject', MODULE_PATH)

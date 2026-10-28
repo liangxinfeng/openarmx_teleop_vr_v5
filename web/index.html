@@ -2,17 +2,21 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Autolife 306 V4 Independent VR Teleoperation</title>
-    <meta name="description" content="Autolife 306 V4 independent VR arm teleoperation">
+    <title>Autolife 306 V5 Independent VR Teleoperation</title>
+    <meta name="description" content="Autolife 306 V5 independent VR arm teleoperation">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="vendor/aframe.min.js"></script>
-    <script src="vr_app.js?v=autolife-306-v2-independent-teleop-29" defer></script>
+    <script src="vr_app.js?v=v5-camera-isolated-20261028a" defer></script>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <main id="launchPanel" class="launch-panel">
       <div class="brand-logo">AUTOLIFE</div>
-      <div class="title">306 V4 独立双臂遥操</div>
+      <div class="title">V5 双臂遥操 · Mink连续跟随</div>
+      <div class="hardware-safety-hint">肩部方向与伸展比例映射；Grip无跳变接管。左X＋右A长按1秒：复位。</div>
+      <div id="v5SessionStatus" class="hardware-safety-hint">V5 连续求解状态等待中</div>
+      <button id="reachCalibrationButton" class="camera-mode-button" type="button">伸展标定（停用遥操后使用）</button>
+      <div id="reachCalibrationStatus" class="hardware-safety-hint">进入VR，停用遥操并松开Grip；双食指扳机同时按住1秒开始标定，随后双臂向前伸直，保持至提示完成。通常约3秒，断帧后自动重新采样，最长15秒。机器人不会移动。</div>
       <div id="serverUrl" class="server-url">loading...</div>
       <section id="hardwareControl" class="hardware-control" aria-live="polite">
         <div class="hardware-status-row">

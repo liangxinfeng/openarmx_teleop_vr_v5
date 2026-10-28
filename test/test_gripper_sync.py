@@ -18,6 +18,7 @@ PARAMETERS = {
     'enable_gripper': True,
     'gripper_open_position': 10.0,
     'gripper_closed_position': 330.0,
+    'gripper_closed_percent': 100.0,
     'gripper_trigger_deadzone': 0.05,
     'gripper_filter_alpha': 0.78,
     'gripper_max_step_per_cycle': 32.0,

@@ -4,8 +4,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CAMERA = ROOT / 'openarmx_teleop_vr_306_v4' / 'camera_stream.py'
-BRIDGE = ROOT / 'openarmx_teleop_vr_306_v4' / 'vr_web_bridge.py'
+CAMERA = ROOT / 'openarmx_teleop_vr_306_v5' / 'camera_stream.py'
+BRIDGE = ROOT / 'openarmx_teleop_vr_306_v5' / 'vr_web_bridge.py'
 WEB = ROOT / 'web' / 'vr_app.js'
 
 
@@ -47,8 +47,11 @@ def test_web_uses_b_rising_edge_and_defaults_to_passthrough():
     assert "mode: 'passthrough'" in source
     assert 'function toggleCameraMode()' in source
     assert "handEl.addEventListener('bbuttondown'" in source
-    assert 'if (!buttons.b) toggleCameraMode();' in source
-    assert 'if (this.rightButtons.b && !previousB) toggleCameraMode();' in source
+    assert 'if (!buttons.b) this.handleCameraModeBDown();' in source
+    assert 'if (buttons.b) this.handleCameraModeBUp();' in source
+    assert 'performance.now() - startedAt < 700' in source
+    assert 'if (nextB && !previousB) this.handleCameraModeBDown();' in source
+    assert 'if (!nextB && previousB) this.handleCameraModeBUp();' in source
     assert "setCameraMode('passthrough');" in source
     assert 'panel.setAttribute(\'visible\', state.image.mode === \'rgbd\')' in source
     assert 'async function startLatestJpegStream(id)' in source

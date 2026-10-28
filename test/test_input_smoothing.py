@@ -1,4 +1,4 @@
-from openarmx_teleop_vr_306_v4.teleop_core import grip_release_state
+from openarmx_teleop_vr_306_v5.teleop_core import grip_release_state
 
 
 def test_one_false_frame_holds_latched_arm():

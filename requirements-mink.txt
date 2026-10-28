@@ -1,0 +1,7 @@
+# Validated together on robot345, Python 3.12. Native Pinocchio remains 3.8.0.
+mink==1.3.0
+mujoco==3.16.0
+quadprog==0.1.14
+qpsolvers==4.13.0
+numpy==2.3.5
+scipy==1.18.1

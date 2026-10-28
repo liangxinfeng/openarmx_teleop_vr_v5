@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-22",
+  "tests_passed": 318,
+  "integration": "native Placo + controller, synthetic feedback, isolated DDS domain179, dry_run true",
+  "web": "full launch + HTTPS status + clean shutdown passed",
+  "hardware_motion_test": "NOT PERFORMED",
+  "benchmark": "numerical simulated plant, 80ms tracking model, 0.03deg encoder noise",
+  "numerical_results": {
+    "hold_V4": {
+      "max_joint_drift_deg": 3.4628978670556054,
+      "final_position_error_mm": 6.233439648759656,
+      "p95_position_error_mm": 6.335575064901797,
+      "p95_step_deg": 0.06292788073976507,
+      "p95_solve_ms": 0.6062881997422664,
+      "max_step_deg": 0.09525902969933302
+    },
+    "hold_V5": {
+      "max_joint_drift_deg": 0.012342744939633084,
+      "final_position_error_mm": 0.009879247450596894,
+      "p95_position_error_mm": 0.009879247450596894,
+      "p95_step_deg": 2.5444437451708134e-14,
+      "p95_solve_ms": 0.8215775980715988,
+      "max_step_deg": 0.0025141645969422
+    },
+    "circle_V4": {
+      "max_joint_drift_deg": 3.217437928708548,
+      "final_position_error_mm": 6.1243127053519855,
+      "p95_position_error_mm": 14.593696320924613,
+      "p95_step_deg": 0.08000456306629396,
+      "p95_solve_ms": 0.5478639499415294,
+      "max_step_deg": 0.12339611962494416
+    },
+    "circle_V5": {
+      "max_joint_drift_deg": 0.02701209839135214,
+      "final_position_error_mm": 0.012132967932259126,
+      "p95_position_error_mm": 1.483472707591464,
+      "p95_step_deg": 0.044013451675989024,
+      "p95_solve_ms": 0.8482749501126818,
+      "max_step_deg": 0.04423383715548213
+    },
+    "near_straight_V4": {
+      "max_joint_drift_deg": 13.64191138588523,
+      "final_position_error_mm": 6.1916739559428855,
+      "p95_position_error_mm": 38.2312362299559,
+      "p95_step_deg": 0.07794750268425993,
+      "p95_solve_ms": 0.7645923020390909,
+      "max_step_deg": 0.11248537922263359
+    },
+    "near_straight_V5": {
+      "max_joint_drift_deg": 0.06143856274891011,
+      "final_position_error_mm": 0.05919665343118668,
+      "p95_position_error_mm": 37.35173675982472,
+      "p95_step_deg": 0.05947993284549643,
+      "p95_solve_ms": 0.6798977517973981,
+      "max_step_deg": 0.09561745368931587
+    }
+  }
+}

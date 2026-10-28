@@ -1,9 +1,9 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 set +u
 
 workspace=/home/ubuntu/ros2_ws
-log_file=/tmp/openarmx_306_v4_transport_integration.log
-status_file=/tmp/openarmx_306_v4_transport_status.json
+log_file=/tmp/openarmx_306_v5_transport_integration.log
+status_file=/tmp/openarmx_306_v5_transport_status.json
 launch_pid=""
 launch_pgid=""
 
@@ -44,7 +44,7 @@ source /opt/ros/jazzy/setup.bash || exit 91
 source install/setup.bash || exit 92
 : > "$log_file"
 
-setsid ros2 launch openarmx_teleop_vr_306_v4 full_vr_teleop.launch.py \
+setsid ros2 launch openarmx_teleop_vr_306_v5 full_vr_teleop.launch.py \
   dry_run:=true > "$log_file" 2>&1 &
 launch_pid=$!
 launch_pgid="$(ps -o pgid= -p "$launch_pid" | tr -d ' ')"
@@ -56,7 +56,7 @@ fi
 ready=0
 for _ in $(seq 1 100); do
   if curl -ksS --max-time 1 \
-      https://127.0.0.1:8446/api/status > "$status_file" 2>/dev/null; then
+      https://127.0.0.1:8447/api/status > "$status_file" 2>/dev/null; then
     ready=1
     break
   fi
@@ -74,9 +74,9 @@ fi
 
 echo BRIDGE_READY
 set +e
-/home/ubuntu/miniconda3/envs/robot_env/bin/python \
-  "$workspace/src/openarmx_teleop_vr_306_v4/integration/transport_integration_client.py" \
-  --base-url https://127.0.0.1:8446
+/home/ubuntu/ros2_ws/venvs/openarmx_v4_placo/bin/python \
+  "$workspace/src/openarmx_teleop_vr_306_v5/integration/transport_integration_client.py" \
+  --base-url https://127.0.0.1:8447
 test_rc=$?
 set -e
 echo "INTEGRATION_RC=$test_rc"
@@ -86,7 +86,7 @@ trap - EXIT INT TERM
 
 echo REMAINING_OPENARMX
 pgrep -af \
-  'openarmx_teleop_vr_306_v4|independent_arm_controller|independent_vr_mapper_306_v4|vr_web_bridge' \
+  'openarmx_teleop_vr_306_v5|independent_arm_controller|independent_vr_mapper_306_v5|vr_web_bridge' \
   || true
 echo "VENDOR_SERVICE=$(systemctl --user is-active arm-control-service.service)"
 echo LOG_TAIL

@@ -2,7 +2,7 @@
 
 The integration staging directory used during development is flat, while the
 final ROS package places Python modules below
-``openarmx_teleop_vr_306_v4/``.  The loader supports both layouts
+``openarmx_teleop_vr_306_v5/``.  The loader supports both layouts
 and gives relative imports (for example ``.teleop_core``) a package context.
 """
 
@@ -16,7 +16,7 @@ TEST_DIRECTORY = Path(__file__).resolve().parent
 PACKAGE_ROOT = TEST_DIRECTORY.parent
 SOURCE_CANDIDATES = (
     PACKAGE_ROOT,
-    PACKAGE_ROOT / 'openarmx_teleop_vr_306_v4',
+    PACKAGE_ROOT / 'openarmx_teleop_vr_306_v5',
 )
 SYNTHETIC_PACKAGE = '_autolife_independent_arm_control_subject'
 

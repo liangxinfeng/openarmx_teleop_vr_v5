@@ -1,4 +1,4 @@
-﻿# 306 V4 閬ユ搷浼犺緭鏃犲姩浣滈泦鎴愭祴璇?
+﻿# 306 V5 閬ユ搷浼犺緭鏃犲姩浣滈泦鎴愭祴璇?
 `transport_integration_client.py` 鍙悜 `dry_run:=true` 鐨勬ˉ鍙戦€佹棤鎵嬫焺浣嶅Э銆?鎵€鏈夋寜閽噴鏀剧殑鏁版嵁锛屼笉鐢熸垚鏈烘鑷傜洰鏍囥€傚畠妫€鏌ワ細
 
 - 绗竴浠?WebRTC DataChannel 鐨?generation 涓?ACK锛?- 绗簩浠ｈ繛鎺ユ浛鎹㈢涓€浠ｈ繛鎺ワ紝鏃т唬鏁版嵁鍜屾棫 offer 涓嶄細褰卞搷鏂拌繛鎺ワ紱
@@ -11,15 +11,15 @@
 cd /home/ubuntu/ros2_ws
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
-ros2 launch openarmx_teleop_vr_306_v4 full_vr_teleop.launch.py dry_run:=true
+ros2 launch openarmx_teleop_vr_306_v5 full_vr_teleop.launch.py dry_run:=true
 ```
 
 缁堢浜岋細
 
 ```bash
 /home/ubuntu/miniconda3/envs/robot_env/bin/python \
-  /home/ubuntu/ros2_ws/src/openarmx_teleop_vr_306_v4/integration/transport_integration_client.py \
-  --base-url https://127.0.0.1:8446
+  /home/ubuntu/ros2_ws/src/openarmx_teleop_vr_306_v5/integration/transport_integration_client.py \
+  --base-url https://127.0.0.1:8447
 ```
 
 鎴愬姛鏃舵渶鍚庝竴琛屽簲涓猴細

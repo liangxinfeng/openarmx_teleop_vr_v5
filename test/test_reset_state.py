@@ -4,14 +4,14 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / 'openarmx_teleop_vr_306_v4'
+SOURCE = ROOT / 'openarmx_teleop_vr_306_v5'
 RESET_STATE = SOURCE / 'reset_state.py'
 MAPPER = SOURCE / 'vr_mapper_node.py'
 
 
 def _load_reset_state():
     spec = importlib.util.spec_from_file_location(
-        'openarmx_306_v4_reset_state_subject', RESET_STATE
+        'openarmx_306_v5_reset_state_subject', RESET_STATE
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -180,7 +180,7 @@ def test_one_hundred_enable_reset_cycles_never_accumulate_a_stuck_latch():
 
 def test_mapper_integrates_timeout_generation_and_input_callback_rearm():
     mapper = MAPPER.read_text(encoding='utf-8')
-    check_reset = _function_source(MAPPER, '_check_quick_reset')
+    check_reset = _function_source(MAPPER, '_check_reset_gesture')
     input_callback = _function_source(MAPPER, '_on_vr_input')
     boundary = _function_source(MAPPER, '_begin_session_boundary_locked')
 

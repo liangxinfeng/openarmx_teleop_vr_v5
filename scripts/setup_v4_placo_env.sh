@@ -16,4 +16,4 @@ fi
 "$VENV_DIR/bin/python" -m pip install --disable-pip-version-check \
   'placo==0.9.17'
 
-echo "V4 Placo environment ready: $VENV_DIR"
+echo "V5 Placo environment ready: $VENV_DIR"

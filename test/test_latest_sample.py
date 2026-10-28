@@ -1,4 +1,4 @@
-from openarmx_teleop_vr_306_v4.latest_sample import LatestSampleMailbox
+from openarmx_teleop_vr_306_v5.latest_sample import LatestSampleMailbox
 
 
 def test_pending_sample_is_replaced_and_old_sequence_is_invalidated():

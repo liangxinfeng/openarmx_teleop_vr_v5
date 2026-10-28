@@ -3,9 +3,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTROLLER = ROOT / 'openarmx_teleop_vr_306_v4' / 'controller_node.py'
-MAPPER = ROOT / 'openarmx_teleop_vr_306_v4' / 'vr_mapper_node.py'
-BRIDGE = ROOT / 'openarmx_teleop_vr_306_v4' / 'vr_web_bridge.py'
+CONTROLLER = ROOT / 'openarmx_teleop_vr_306_v5' / 'controller_node.py'
+MAPPER = ROOT / 'openarmx_teleop_vr_306_v5' / 'vr_mapper_node.py'
+BRIDGE = ROOT / 'openarmx_teleop_vr_306_v5' / 'vr_web_bridge.py'
 CONFIG = ROOT / 'config' / 'teleop.yaml'
 WEB = ROOT / 'web' / 'vr_app.js'
 

@@ -1,6 +1,6 @@
 import numpy as np
 
-from openarmx_teleop_vr_306_v4.adaptive_position import (
+from openarmx_teleop_vr_306_v5.adaptive_position import (
     AdaptivePositionFeedforward,
     JointTargetVelocityEstimator,
     predict_latest_target,

@@ -1,6 +1,6 @@
-independent_vr_mapper_306_v4:
+independent_vr_mapper_306_v5:
   ros__parameters:
-    topic_suffix: "0_307"
+    topic_suffix: "0_345"
     dry_run: true
     # Low-latency profile: consume the latest WebXR sample at up to 90 Hz.
     command_rate: 90.0
@@ -18,10 +18,9 @@ independent_vr_mapper_306_v4:
     # clutch anchors and keeps the already-enabled controller in position hold;
     # explicit UI disable or terminal shutdown still ends the session.
     disable_on_vr_timeout: false
-    position_scale: 0.70
-    # Match human forward extension to robot arm extension without changing
-    # the proven lateral/vertical sensitivity.
-    forward_position_scale: 0.90
+    position_scale: 1.0
+    # Fallback relative mapping is isotropic; calibrated mapping uses shoulder/reach.
+    forward_position_scale: 1.0
     # The mapper now advances at the fixed 90 Hz control tick rather than only
     # on bursty WebXR arrivals. This ~20 ms smoothing constant removes target
     # steps while keeping hand response perceptually immediate.
@@ -42,9 +41,8 @@ independent_vr_mapper_306_v4:
     # Cartesian workspace.  The mapper now projects continuously at this wider
     # boundary instead of dropping the command.
     max_anchor_displacement: 0.70
-    # At 26 cm the robot reaches its physical forward shell with about 11 deg
-    # elbow bend. Larger human motion remains continuously held at that shell.
-    max_forward_displacement: 0.26
+    # Fixed clutch-forward clipping removed; URDF reach and workspace remain.
+    max_forward_displacement: 0.0
     workspace_minimum: [-0.10, -0.75, 0.25]
     workspace_maximum: [0.90, 0.75, 1.60]
     # Allow each hand to cross the body centre by 22 cm.  The torso box and

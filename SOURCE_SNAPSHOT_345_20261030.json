@@ -1,0 +1,1036 @@
+{
+  "date": "2026-10-30",
+  "branch": "robot345-v5-20261030",
+  "source_package": "/home/ubuntu/ros2_ws/src/openarmx_teleop_vr_306_v5",
+  "source_archive_sha256": "281bef08411f2a54425b49759b134894db35c61b7ba7eae7f2e421b64856a425",
+  "source_files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 114,
+      "mode": "0o644",
+      "sha256": "b297c9a7096638aac8cbbdc3f96a7dce7e40c27ddaf2a60b04ac30dd8376c452"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 310,
+      "mode": "0o644",
+      "sha256": "0df225ada67c86b098c9bf2e854be78cca88d250191099cfad6616115568f5a5"
+    },
+    {
+      "path": "AI_MIGRATION_GUIDE.md",
+      "bytes": 2186,
+      "mode": "0o644",
+      "sha256": "6512cd133ea8381e08731b5fa6b276d894452aa081b10b4fb28ae4abc5ad472b"
+    },
+    {
+      "path": "NOTICE",
+      "bytes": 835,
+      "mode": "0o644",
+      "sha256": "92b733f43683f9b7397cdac8710bd98a804ee59d46c292a77dbe1714856f9a63"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2377,
+      "mode": "0o644",
+      "sha256": "81e8d8f12ab95b27b815df90d2027a580c2d4ea2d3b661f9759c3c63612511ba"
+    },
+    {
+      "path": "README_HISTORICAL_SNAPSHOT.md",
+      "bytes": 3035,
+      "mode": "0o644",
+      "sha256": "99f7a97da1c53ffc55ea19ea0e28229bc0e964db4d89b61539bd17cc37895385"
+    },
+    {
+      "path": "ROBOT307_VERSION.md",
+      "bytes": 1811,
+      "mode": "0o644",
+      "sha256": "aa67695871355093b3ad1e163f11fc41c51c1f73a0713ff7ea374928ffcf3991"
+    },
+    {
+      "path": "SOURCE_MANIFEST_ROBOT307.json",
+      "bytes": 24569,
+      "mode": "0o644",
+      "sha256": "4aa75687735b2fd1a47c47bf40e8e04d0a339119fba81beb1967188fc249de43"
+    },
+    {
+      "path": "THIRD_PARTY_LICENSES.md",
+      "bytes": 1617,
+      "mode": "0o644",
+      "sha256": "82479df2f3638685052dc27be591879e7415bca0532aa7b072c45a1d57922b99"
+    },
+    {
+      "path": "V5_CHANGES.md",
+      "bytes": 5033,
+      "mode": "0o644",
+      "sha256": "dd270d60de72457f48bce703461389823dff1e45a04428447c1f4cdbe437cf60"
+    },
+    {
+      "path": "V5_MINK.md",
+      "bytes": 2084,
+      "mode": "0o644",
+      "sha256": "478f11f14dd4b6ac6a63830bc5ac73a278c845e0d39236adde93fafd074dbfcf"
+    },
+    {
+      "path": "V5_NATURAL_REACH.md",
+      "bytes": 3690,
+      "mode": "0o644",
+      "sha256": "b16eb0b1db1baee6d7d2aa72f5e90bdea765bdfdf86649ce8ad0592361f40920"
+    },
+    {
+      "path": "V5_VALIDATION.json",
+      "bytes": 2228,
+      "mode": "0o644",
+      "sha256": "cf5edf1b0a1e23e8f3954435dbbca7a5c5a671f1797a4005e1c2a4fc82b015ea"
+    },
+    {
+      "path": "config/controller.yaml",
+      "bytes": 7883,
+      "mode": "0o644",
+      "sha256": "6e1d770371b55081064b21018ccc4ed46bb7567b3baa8634dafdde4f93c6202c"
+    },
+    {
+      "path": "config/teleop.yaml",
+      "bytes": 6741,
+      "mode": "0o644",
+      "sha256": "a553d64fe5e86d17fedde6a9e5645e6f10ac2247abba2b1f6a6fb34b247965ba"
+    },
+    {
+      "path": "integration/README.md",
+      "bytes": 1530,
+      "mode": "0o644",
+      "sha256": "4561e005339acc353def969aed68638bab041ee9f08b80b994b0c97b7669f713"
+    },
+    {
+      "path": "integration/run_transport_integration.sh",
+      "bytes": 2308,
+      "mode": "0o644",
+      "sha256": "df950e375c3367b1833696a4235f8df796e88e54cefab50a4e51a6d4adcc7ffa"
+    },
+    {
+      "path": "integration/transport_integration_client.py",
+      "bytes": 14155,
+      "mode": "0o644",
+      "sha256": "ae4cdbddefd57f7a5fdebad6a811e1de456db70873628d90d346076ac0b3d433"
+    },
+    {
+      "path": "launch/full_vr_teleop.launch.py",
+      "bytes": 14550,
+      "mode": "0o644",
+      "sha256": "64adc5a949b46363f2ef082c102e6b3f1824f2006d125714e65b285a11ddd2e1"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Ankle_to_Knee.STL",
+      "bytes": 277984,
+      "mode": "0o644",
+      "sha256": "1afc2714313f183d12ee0d68850950baec95ea286ab26f2f61d82290df4cc000"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Camera_Gripper_Left.STL",
+      "bytes": 8484,
+      "mode": "0o644",
+      "sha256": "9f3690b61c343a496bd7d209e7bb289357efa3fb0ac9abd02c8f324cca954215"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Camera_Gripper_Right.STL",
+      "bytes": 8484,
+      "mode": "0o644",
+      "sha256": "80642a3e4708a29316d34ec9bdbd11d98a0dc121ea7069da09cf7884f0bab65b"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Camera_Head_Back.STL",
+      "bytes": 61884,
+      "mode": "0o644",
+      "sha256": "18003a8af0a5483b607753f0de981f7ccb7851432cef18f87045fea6680156d3"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Camera_Head_Forehead.STL",
+      "bytes": 65784,
+      "mode": "0o644",
+      "sha256": "9c16bd112c09fe8476be06acddd7ade7df53f18f555aa89cc80449264e0a6fb6"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Camera_Head_Left_Eye.STL",
+      "bytes": 60984,
+      "mode": "0o644",
+      "sha256": "c742d0e313ce92af131ccdabb16f901557583b912ef4544125ff0b5052876f23"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Camera_Head_Right_Eye.STL",
+      "bytes": 60984,
+      "mode": "0o644",
+      "sha256": "da735a9cb7b2ef12fd15afc024b974642d904b96a0573d45d73d23be292b5359"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Ground_Vehicle.STL",
+      "bytes": 1140134,
+      "mode": "0o644",
+      "sha256": "8dd85b2d8c0b5ea2df730c99c355f99e635b77c73fae48ceaf4b82ba5ad7bc77"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_IMU.STL",
+      "bytes": 24284,
+      "mode": "0o644",
+      "sha256": "05036f7d6f9b338be55325e3572720600e2a4e28184f19877f0ffda5db103447"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Knee_to_Waist_Pitch.STL",
+      "bytes": 475584,
+      "mode": "0o644",
+      "sha256": "ca18902a232322f9d963fa4ea02d14d56ab3c6fed29ec871d649668d64f6748e"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Left_Elbow_to_Forearm.STL",
+      "bytes": 511484,
+      "mode": "0o644",
+      "sha256": "7240a7aff0b85e0e51d9bf66b8e8e13836eb688e8e5ab10e9f45a6a82f0b9585"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Left_Forearm_to_Wrist_Upper.STL",
+      "bytes": 594334,
+      "mode": "0o644",
+      "sha256": "c460d5a89bc871575bb9b4603cff24b68a8d87e3344630f6cbd213b63a0a2f68"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Left_Gripper.STL",
+      "bytes": 393084,
+      "mode": "0o644",
+      "sha256": "014f18e9a0fa0c2e1089ba9c17d30345d50dc1f108054baf85cdaff93bcc69bd"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Left_Gripper_Left_Finger.STL",
+      "bytes": 196084,
+      "mode": "0o644",
+      "sha256": "aa7acd7ba602993674bbbcd3699dc3e9e291363cf6f7b9ac7690d592e3e8c644"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Left_Gripper_Left_Inner_Knuckle.STL",
+      "bytes": 97184,
+      "mode": "0o644",
+      "sha256": "b81196b9763fc4a153aff14c20bab37f31e59aee557f58f06510e1990d915e3f"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Left_Gripper_Right_Finger.STL",
+      "bytes": 195984,
+      "mode": "0o644",
+      "sha256": "13e28d9bb3a25e5d1d53d201df588c2c8419c07e6b74ea841fa828c5a1b95029"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Left_Gripper_Right_Inner_Knuckle.STL",
+      "bytes": 94984,
+      "mode": "0o644",
+      "sha256": "64e60a8a38025453b4e9a28aa9966d79f2d1f9adbcb1d71a8598e9791fdee98d"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Left_Gripper_Right_Outer_Knuckle.STL",
+      "bytes": 395484,
+      "mode": "0o644",
+      "sha256": "a0dcbae9fcfce99c2e30fa974ac0ba4c9c29ac0ba61eb7160c0ff584c3ea8c2f"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Left_Shoulder_Inner_to_Shoulder_Outer.STL",
+      "bytes": 428534,
+      "mode": "0o644",
+      "sha256": "4331eb7c039e2dd9b7ed81e2beedbdebd5bca110330f040b2c641dab2769fdd0"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Left_Shoulder_Outer_to_UpperArm.STL",
+      "bytes": 537784,
+      "mode": "0o644",
+      "sha256": "c553ee859be2c47264c81015b4d077851f6b3ff784965a2b3ff2380ca5dd5f52"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Left_UpperArm_to_Elbow.STL",
+      "bytes": 378384,
+      "mode": "0o644",
+      "sha256": "9e4d5f6aba352a0d2bc6eed2396aa7c6886edae40c0f6eebc96ae1267c2c4aa7"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Left_Wrist_Lower_Single_Gripper.STL",
+      "bytes": 442334,
+      "mode": "0o644",
+      "sha256": "d9cc18ace17758aed771a0a92bdd2dba79bcdc2efa7ec0e0f25416b78e6935e4"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Left_Wrist_Lower_to_Gripper.STL",
+      "bytes": 407934,
+      "mode": "0o644",
+      "sha256": "c4280ad4a7eef277135794ee803edc9f82e19fb78c5201f5a29b70dc7cc57aad"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Left_Wrist_Upper_to_Wrist_Lower.STL",
+      "bytes": 477434,
+      "mode": "0o644",
+      "sha256": "369d0ebb7748aede577fe36ea4822e7055fb98176790dd8fa18093659f1ace3c"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Lidar_Back.STL",
+      "bytes": 429684,
+      "mode": "0o644",
+      "sha256": "14f867027da347efc9c54242ddae2e743d3856905f6298dfefa5f4898fe0d67e"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Lidar_Front.STL",
+      "bytes": 430284,
+      "mode": "0o644",
+      "sha256": "a6f4a8d2b158f4cfce625faeece402a5f4d07a6075950b541bdc2e91290fe6f0"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Neck_Pitch_to_Neck_Yaw.STL",
+      "bytes": 350084,
+      "mode": "0o644",
+      "sha256": "d64045307b47bdf0512a18d89f30356145ca35a0a02fecbc4a096ea9f1750b98"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Neck_Roll_to_Neck_Pitch.STL",
+      "bytes": 540284,
+      "mode": "0o644",
+      "sha256": "3337c06dbbe6fc775c2e9234faf60112c84fbca02e5bb6d88fa384ebd7554ae0"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Neck_Yaw_to_Head.STL",
+      "bytes": 355784,
+      "mode": "0o644",
+      "sha256": "e215dc5af7a2199106ec33bd68976365f705825408c91b50812a2cbfc361566c"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Right_Elbow_to_Forearm.STL",
+      "bytes": 256384,
+      "mode": "0o644",
+      "sha256": "5fb8ce641d360ba7b330530ab903b615c38cdc261d06a227087abccb01a05e21"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Right_Forearm_to_Wrist_Upper.STL",
+      "bytes": 297084,
+      "mode": "0o644",
+      "sha256": "a8069f263424c42fb3e031dab532216cfbe6dd6d1cb5eb2050dc6f4ca2d57188"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Right_Gripper.STL",
+      "bytes": 393084,
+      "mode": "0o644",
+      "sha256": "8f8baad1c8d02a8b9f106c6b9c3db2a2f3076f9b77b6f45c4ce9bd53c62e61e5"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Right_Gripper_Left_Finger.STL",
+      "bytes": 196084,
+      "mode": "0o644",
+      "sha256": "27ccc64cde0c23a249a7c6d053b8bab50ff9f3871d863713edc5226de8059bea"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Right_Gripper_Left_Inner_Knuckle.STL",
+      "bytes": 97184,
+      "mode": "0o644",
+      "sha256": "af62d6f5a702a2a30f086b0f618ebd2d20df3c47ec09d0a4c68203925edfcf4c"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Right_Gripper_Right_Finger.STL",
+      "bytes": 195984,
+      "mode": "0o644",
+      "sha256": "f28cb7d6f18a14c69a2968111ce325e08734d6effd3ccebb378a0306647881a3"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Right_Gripper_Right_Inner_Knuckle.STL",
+      "bytes": 94984,
+      "mode": "0o644",
+      "sha256": "38cc69b141f507e5b3c5fd334a89f446739a60373be2feb21af8cf0754a5b628"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Right_Gripper_Right_Outer_Knuckle.STL",
+      "bytes": 395484,
+      "mode": "0o644",
+      "sha256": "d0dc2e63078db74699702a3156b1ce68e0bd42ba73310915bb2737c03bd15a5f"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Right_Shoulder_Inner_to_Shoulder_Outer.STL",
+      "bytes": 433284,
+      "mode": "0o644",
+      "sha256": "1611a990d687a03a0fe7965bdf8d446cd002b471237435230f90c55cbda42808"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Right_Shoulder_Outer_to_UpperArm.STL",
+      "bytes": 539934,
+      "mode": "0o644",
+      "sha256": "262bc445a67ab1d5604a7be16707a9fd74cf5562c824570e59e4b5590f17b1ef"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Right_UpperArm_to_Elbow.STL",
+      "bytes": 380084,
+      "mode": "0o644",
+      "sha256": "6e474b883cdc40d1746b0058464f6bcfa6cba113989ee2da5506b768aef48cae"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Right_Wrist_Lower_Single_Gripper.STL",
+      "bytes": 442334,
+      "mode": "0o644",
+      "sha256": "4b3c77e2818d3c9999d189ac60a26b16ebdeb307551d042951f8f538fb622cd3"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Right_Wrist_Lower_to_Gripper.STL",
+      "bytes": 407934,
+      "mode": "0o644",
+      "sha256": "d1172404f2dafab6cb92ab574ae199df4e99d65452496d2f32517a594eca4c73"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Right_Wrist_Upper_to_Wrist_Lower.STL",
+      "bytes": 477134,
+      "mode": "0o644",
+      "sha256": "71d6e35589da570ba1a6883a6113e0830dc127c9d06be95037a95523e8457a00"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Waist_Pitch_to_Waist_Yaw.STL",
+      "bytes": 300784,
+      "mode": "0o644",
+      "sha256": "a910641e7fb4abd50823fb0a5934e06fa0a3725d6e670ad6254b4b3fd1cb370e"
+    },
+    {
+      "path": "meshes/robot_v2_2/Link_Waist_Yaw_to_Shoulder_Inner.STL",
+      "bytes": 709734,
+      "mode": "0o644",
+      "sha256": "414dc74b9db409b863146e5220614e5dbe9066ae714097325c878db879c45a8d"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/__init__.py",
+      "bytes": 60,
+      "mode": "0o644",
+      "sha256": "1550442a7e2ecd434c20764807aa96abd827c66303cf4b7a162121825b4e3bb8"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/adaptive_position.py",
+      "bytes": 16041,
+      "mode": "0o644",
+      "sha256": "49f5f6df35f51180e0b7024afc77d4b0ad43de57a4a2de4d632b479b1fe4d5b6"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/arm_geometry.py",
+      "bytes": 2200,
+      "mode": "0o644",
+      "sha256": "9c4f378db103240876c2dbecc6a443059d7d6ac69cd7d33126082bdfd7e584e3"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/arm_reference_frame.py",
+      "bytes": 528,
+      "mode": "0o644",
+      "sha256": "dc8ec31bbd3714fa8a6cd0d13f69bedf82c9e5377f07f6838f2edbd07d07f2f4"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/body_height.py",
+      "bytes": 4160,
+      "mode": "0o644",
+      "sha256": "c1e20c8f8b1124c1b091de7863da5162d48b0cc837ceab15fcb695b273de607b"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/camera_stream.py",
+      "bytes": 9023,
+      "mode": "0o644",
+      "sha256": "8214be5f1536b1f09368f182a6fa8396ce1b2fe3f928601982ce65b842ed9dd9"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/controller_node.py",
+      "bytes": 251941,
+      "mode": "0o644",
+      "sha256": "562b29b9b4e6fed4524652af3514136edd9ab55aa5985303f84a7ecfbc6ed3ec"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/desktop_mode.py",
+      "bytes": 7719,
+      "mode": "0o644",
+      "sha256": "5e97ffe246b77ca604d9850fd48ae1e7292b175159b8c49bbd6c0bb5c2348913"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/elbow_plane.py",
+      "bytes": 9759,
+      "mode": "0o644",
+      "sha256": "44b159d81ee1036a071b2f7c07e9b4377da601ab3a4ed2b619ec3f0df10bf111"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/grip_session_ik.py",
+      "bytes": 8237,
+      "mode": "0o644",
+      "sha256": "7dd8ac9e4a5fb83f8c501936805df3728369e26c3af4e174319c2ff42d0628ad"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/gripper_aperture.py",
+      "bytes": 2180,
+      "mode": "0o644",
+      "sha256": "c7ee15c2910a05ac913e1b7205fc43bc06e3abc520b849c6a72205b14b3b82c4"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/ik_self_test.py",
+      "bytes": 1704,
+      "mode": "0o644",
+      "sha256": "a904016fb57d5017fe6cbaeb39f9ea31831a0c857da78ab0e0edf00e4a96be1d"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/kinematics.py",
+      "bytes": 16279,
+      "mode": "0o644",
+      "sha256": "8d38b4f8d8dc0ae071bdca8569cdc6a758e529ec76efa4eb2dbd67b5fa6d18bd"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/latest_sample.py",
+      "bytes": 2583,
+      "mode": "0o644",
+      "sha256": "4e5dcb48e317224849090d1e7a6e18628cafcc71a8fd0fccb125d930b6afcc0b"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/mink_kinematics.py",
+      "bytes": 33554,
+      "mode": "0o644",
+      "sha256": "23a2f0ed2443505d77bdbbb32d1c8d6dd7b9d9261194b0e77d49899fc2e13b5d"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/mujoco_urdf_model.py",
+      "bytes": 9133,
+      "mode": "0o644",
+      "sha256": "eaa1558a794e8ea0ed9fee068960d2bcdce2a6f8f332af285176681957612277"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/openarmx_udp_input_node.py",
+      "bytes": 9201,
+      "mode": "0o644",
+      "sha256": "3e6dab8d6290c31b3a5f39f170c0397475b1bd84af42fd1789197455c2b17095"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/qos.py",
+      "bytes": 755,
+      "mode": "0o644",
+      "sha256": "c66d25856d08c11cea324fef5249b17193ed84ef9802a5d2d00b8ed46d20ddd9"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/quest_incremental.py",
+      "bytes": 7718,
+      "mode": "0o644",
+      "sha256": "ae2b593c289af451643a92db44f53cdfbd9b72fb3c334c8af8500b08644e24f9"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/quest_placo_kinematics.py",
+      "bytes": 20228,
+      "mode": "0o644",
+      "sha256": "716f72f07664bc19580979ff3a5ec414ee17b1bcddd334d18c1320091071cac8"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/reach_calibration.py",
+      "bytes": 3776,
+      "mode": "0o644",
+      "sha256": "e7353dbc39584042da9c507d9253339bf623d2e822933ac8d7e309bd18d65210"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/reset_path.py",
+      "bytes": 3780,
+      "mode": "0o644",
+      "sha256": "510c34ea6d284add59cd6752c49e3fe93ce068853821bf3cf7943f717162a503"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/reset_state.py",
+      "bytes": 8285,
+      "mode": "0o644",
+      "sha256": "bc1d609ee645699b2a454c23bd99a4c363e93b71b4fd617e7fda0112ac9f6b32"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/return_shape.py",
+      "bytes": 1717,
+      "mode": "0o644",
+      "sha256": "22d00b2b7a6047b1b25bcd1911d805edfef6f15ad9cf48b0dea55cb1282e5c8f"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/schema.py",
+      "bytes": 4936,
+      "mode": "0o644",
+      "sha256": "77341bece7b7acc5fc823adbdf97e0cada4d3eab3cf3ff308c1c01a73344f7bb"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/shoulder_retarget.py",
+      "bytes": 5348,
+      "mode": "0o644",
+      "sha256": "1d38c6b0941c02309f16756c26b6a795b64938de2cce714d79800f0fe1d89573"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/teleop_core.py",
+      "bytes": 40700,
+      "mode": "0o644",
+      "sha256": "eef3bfff09a6435ebd7b46f63b610e115557b31cca23d7a1f8f6b1cfd428b7f5"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/teleop_smoother.py",
+      "bytes": 4332,
+      "mode": "0o644",
+      "sha256": "c7d9f20b44fb6599439327d309d9e0b9fba3e2ce487cd4033b4177d615b187eb"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/trajectory_limiter.py",
+      "bytes": 8631,
+      "mode": "0o644",
+      "sha256": "5c8249b2448714a651775169dba9f82b6763a372161fe7ec670a3da80f502ea1"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/velocity_servo.py",
+      "bytes": 10512,
+      "mode": "0o644",
+      "sha256": "55cdb01b0caefae6e7d41e58b5fdd094de9711c89720c37797e1c0b6102aece6"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/vr_mapper_node.py",
+      "bytes": 70081,
+      "mode": "0o644",
+      "sha256": "f9c96e425387d6a0a06b3274a3cc4b17a5b45ee21048157545fb58d7b9e9acf3"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/vr_web_bridge.py",
+      "bytes": 60515,
+      "mode": "0o644",
+      "sha256": "cd7d4e164d018a7c8a9c7bbca9821fee8a97d3f716dbe690549b936432212580"
+    },
+    {
+      "path": "openarmx_teleop_vr_306_v5/waist_follow_state.py",
+      "bytes": 1674,
+      "mode": "0o644",
+      "sha256": "cc92e5552b7755047fed8b28585d12555336cd36ce8289f2471cf692a082b181"
+    },
+    {
+      "path": "package.xml",
+      "bytes": 1026,
+      "mode": "0o644",
+      "sha256": "3085babe2004ba9df28180be7bb4b5e2bce08330a6adae417af81cef064eb774"
+    },
+    {
+      "path": "requirements-mink.txt",
+      "bytes": 168,
+      "mode": "0o644",
+      "sha256": "2cf31dfb8c2a54a8ab6891b9129c07f31e409546e0c8b5985aac2da82cacc284"
+    },
+    {
+      "path": "resource/openarmx_teleop_vr_306_v5",
+      "bytes": 1,
+      "mode": "0o644",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "scripts/openarmx_306_v5_arm_controller_robot_env.sh",
+      "bytes": 348,
+      "mode": "0o755",
+      "sha256": "a791ab851443f34e132f13c3409801e3bbc802ab2ce91453546083f2956910c7"
+    },
+    {
+      "path": "scripts/setup_v4_placo_env.sh",
+      "bytes": 497,
+      "mode": "0o755",
+      "sha256": "7f67dfd742e2d91fedb57921b3f39ce78ceef992e69ee8d07da8660ee2d4cb7e"
+    },
+    {
+      "path": "scripts/setup_v5_mink_env.sh",
+      "bytes": 1021,
+      "mode": "0o644",
+      "sha256": "1686e8e393c64dcbd1015cb3187399a93686978c49b18c5581ba6fae943ceafc"
+    },
+    {
+      "path": "setup.cfg",
+      "bytes": 119,
+      "mode": "0o644",
+      "sha256": "411e537f6b040d2d54a9b765068d5a4dd991378ba9921f6b054a6d7c401e8a37"
+    },
+    {
+      "path": "setup.py",
+      "bytes": 1899,
+      "mode": "0o644",
+      "sha256": "909803157598d162d12e33a66402391e643859ae86e91939f8cca238e18bd166"
+    },
+    {
+      "path": "test/__init__.py",
+      "bytes": 54,
+      "mode": "0o644",
+      "sha256": "5f1435ebd325a2bee15a6c821a281e0b2d00ef1fe197c731b94bad96b1187cd3"
+    },
+    {
+      "path": "test/_subject.py",
+      "bytes": 2115,
+      "mode": "0o644",
+      "sha256": "c5e523e701c360d7967739a67cbb4936aeade5155b8b6c14f8b725683dd6c0aa"
+    },
+    {
+      "path": "test/test_absolute_height_convergence.py",
+      "bytes": 3056,
+      "mode": "0o644",
+      "sha256": "0967db1a16eeb6f9dee0e007cc6bab17566e8caaf4d354f21f625de74aafb466"
+    },
+    {
+      "path": "test/test_adaptive_position.py",
+      "bytes": 2737,
+      "mode": "0o644",
+      "sha256": "80622810472abcf9559207f13223bb140ebe7f90b951f7ef9a1a96f0bde2401a"
+    },
+    {
+      "path": "test/test_body_height_control.py",
+      "bytes": 4387,
+      "mode": "0o644",
+      "sha256": "a6e1cb0c13c732afa83b8c2c1e258821590dc93446a5f55082dc0ac48c6ea7f1"
+    },
+    {
+      "path": "test/test_camera_stream.py",
+      "bytes": 4812,
+      "mode": "0o644",
+      "sha256": "37cb9530b291c655ae99f9851dcd4675291e9dcb7071a2169c93a2217f8ebea2"
+    },
+    {
+      "path": "test/test_clutch_protocol.py",
+      "bytes": 3070,
+      "mode": "0o644",
+      "sha256": "e32816e3dd0b9876c5872dc104e948e0bbe62dc47732ad9190960c59237cf64d"
+    },
+    {
+      "path": "test/test_controller_reset_boundaries.py",
+      "bytes": 5304,
+      "mode": "0o644",
+      "sha256": "283dbedfaad4679914cfb2b62f7d7dfdf6a1ac61e07c5d4e88f76f6850cab3b2"
+    },
+    {
+      "path": "test/test_desktop_mode.py",
+      "bytes": 3169,
+      "mode": "0o644",
+      "sha256": "e999240a03a2289a634093970c7354f34a0b0032d5ec6e6ce2f9822b6816e8a4"
+    },
+    {
+      "path": "test/test_desktop_mode_controller_static.py",
+      "bytes": 1115,
+      "mode": "0o644",
+      "sha256": "4d788914615c7a769cb6600d5658c9fd31089a7d1fac262313d284fc3fe32df0"
+    },
+    {
+      "path": "test/test_desktop_mode_transport_static.py",
+      "bytes": 1694,
+      "mode": "0o644",
+      "sha256": "03002120396626336e9ccf599b6d000e71c48b1dcbea7462812f1535c334ae1d"
+    },
+    {
+      "path": "test/test_dynamic_command_lead.py",
+      "bytes": 2455,
+      "mode": "0o644",
+      "sha256": "d31c87c1bb0e5466997e09c9eb451088fdfb6c3f1666c29a51d111e68e7f8e50"
+    },
+    {
+      "path": "test/test_elbow_plane.py",
+      "bytes": 6438,
+      "mode": "0o644",
+      "sha256": "d3eaf1b4e043c4d1ba8a5f4da8b4be483cc25c239446420b06b96f3343f9e871"
+    },
+    {
+      "path": "test/test_grip_hold_reset.py",
+      "bytes": 5128,
+      "mode": "0o644",
+      "sha256": "4a0c2b62987cbf7830bcc513437e1fc5e141676925e599fd31cda9edee947eae"
+    },
+    {
+      "path": "test/test_grip_session_ik.py",
+      "bytes": 7989,
+      "mode": "0o644",
+      "sha256": "864a978f540ace630b261f4642348b081ced5229f7d4394e2d5e3d4e5df09a12"
+    },
+    {
+      "path": "test/test_gripper_aperture.py",
+      "bytes": 1668,
+      "mode": "0o644",
+      "sha256": "ed1d0586d7011e45d8e9cc56d3957e1cc1fc404dd9a8bffdff6253ea54439bdc"
+    },
+    {
+      "path": "test/test_gripper_sync.py",
+      "bytes": 3247,
+      "mode": "0o644",
+      "sha256": "516a9aeb99b29163a6f9622f06e67aa28835a5b2e3bf90310606cb98041cf34d"
+    },
+    {
+      "path": "test/test_head_follow_static.py",
+      "bytes": 3151,
+      "mode": "0o644",
+      "sha256": "cd5bf49b77eb788d16bffe518fd9d6307e26a2c628fc7bc197c9ceadfd49acbc"
+    },
+    {
+      "path": "test/test_height_watchdog_regression.py",
+      "bytes": 6245,
+      "mode": "0o644",
+      "sha256": "f4819e671a320b5dbb62a568fcae240dfbd01ecd2eb757e16ec94fc4c1eb4d7d"
+    },
+    {
+      "path": "test/test_input_smoothing.py",
+      "bytes": 913,
+      "mode": "0o644",
+      "sha256": "a685191c04605f727c879dca0b3ee2707cf45d0e6f9ba6b995bd2ad2015dc294"
+    },
+    {
+      "path": "test/test_lateral_limit_transition.py",
+      "bytes": 1626,
+      "mode": "0o644",
+      "sha256": "23160fea8e2311b82e88fb7fd6984008ba47dfce32e67efcf3add1ff5b7d20e2"
+    },
+    {
+      "path": "test/test_latest_sample.py",
+      "bytes": 1358,
+      "mode": "0o644",
+      "sha256": "7aa34e24aa7fe696650ad29c388684fb5f39ca11acfc44ba3452d5e058f678f9"
+    },
+    {
+      "path": "test/test_mink_armshape.py",
+      "bytes": 4992,
+      "mode": "0o644",
+      "sha256": "56fcafcf16faf47404032d1ab4a056d9d1f1278e4a10726d2bd06cd9a55ddf3f"
+    },
+    {
+      "path": "test/test_mink_kinematics.py",
+      "bytes": 12347,
+      "mode": "0o644",
+      "sha256": "2453ca677ebd64009e51b82f0d78e49d30b3deed9823e233b8e67b8ac2d24206"
+    },
+    {
+      "path": "test/test_mink_session_boundaries.py",
+      "bytes": 10558,
+      "mode": "0o644",
+      "sha256": "d5483f0d5c8771fda52fc0e410e42bee0e36eb72d20be4622557e1348da25eb2"
+    },
+    {
+      "path": "test/test_mujoco_urdf_model.py",
+      "bytes": 11921,
+      "mode": "0o644",
+      "sha256": "04be34d5feff055082d5b20bed62413acbd313a9d9d66c30db5476e5bbcc6cd6"
+    },
+    {
+      "path": "test/test_persistent_hmd_session.py",
+      "bytes": 2977,
+      "mode": "0o644",
+      "sha256": "d7cf44353d19eea86ea558180fa9bd7a919c8dbc9c777430065f97aa0cd4c805"
+    },
+    {
+      "path": "test/test_quest_incremental_mapper.py",
+      "bytes": 2651,
+      "mode": "0o644",
+      "sha256": "55ac39d5ad1a733a650428069c161dddd923fa28717c42f2f49a37857d28dc7d"
+    },
+    {
+      "path": "test/test_quest_placo_kinematics.py",
+      "bytes": 3212,
+      "mode": "0o644",
+      "sha256": "bde7673bbbf159c3adc0d83f22ea3bca5a07569e4f69585ee13c70d24542b6af"
+    },
+    {
+      "path": "test/test_reach_calibration.py",
+      "bytes": 2351,
+      "mode": "0o644",
+      "sha256": "7dcebafd542666accb64a833ca94ab8b5236cde0bd675ba245be1cffa7a7cc4c"
+    },
+    {
+      "path": "test/test_reset_path.py",
+      "bytes": 1367,
+      "mode": "0o644",
+      "sha256": "97eb4cdca4c520a63c50a4e500c1adf5c091e4ae894e9ad2b946711a6b00ea7d"
+    },
+    {
+      "path": "test/test_reset_reference_return.py",
+      "bytes": 3416,
+      "mode": "0o644",
+      "sha256": "2344a94364514f184e9462e44594b0f7381a1dd1d9012a3bbb12a209ba44bcb4"
+    },
+    {
+      "path": "test/test_reset_state.py",
+      "bytes": 7752,
+      "mode": "0o644",
+      "sha256": "c706e3deea69a0031de6825b50de4620bfcf39ec3c2cc15f070a07fdadebf891"
+    },
+    {
+      "path": "test/test_retarget_transaction.py",
+      "bytes": 1438,
+      "mode": "0o644",
+      "sha256": "f25c21b149a135dd6677a281f9d1ccf283f74dade01da4d79c52994654a61eb6"
+    },
+    {
+      "path": "test/test_return_shape.py",
+      "bytes": 1952,
+      "mode": "0o644",
+      "sha256": "c6af96d4c9800ad26cc3e21448442ff6a6aaa61dba36034304cc742a2dff030b"
+    },
+    {
+      "path": "test/test_schema.py",
+      "bytes": 5809,
+      "mode": "0o644",
+      "sha256": "13d5f4604aa75d9aaf3480a59c6723dc225644097bff1e71e9c97a399ffe3709"
+    },
+    {
+      "path": "test/test_shoulder_progress_lead.py",
+      "bytes": 2933,
+      "mode": "0o644",
+      "sha256": "d2fdfbda21f73168a6e8644db7a716d265480bcfcd86fca91e245c5cb2cc133d"
+    },
+    {
+      "path": "test/test_shoulder_retarget.py",
+      "bytes": 2777,
+      "mode": "0o644",
+      "sha256": "9c13ecd4206b9b7f5ef20bdc5577adb137e3112f493ef04d5262f8092527c93e"
+    },
+    {
+      "path": "test/test_squat_takeover.py",
+      "bytes": 9371,
+      "mode": "0o644",
+      "sha256": "73373207e099ca35559fcf11d71f2361e4ae7f3589bc4a57fede136e5612a9b7"
+    },
+    {
+      "path": "test/test_straight_axial.py",
+      "bytes": 1275,
+      "mode": "0o644",
+      "sha256": "973b82a4416c4a4582ae32558c979cd33856873d08a03871803f1e3a3aaed518"
+    },
+    {
+      "path": "test/test_takeover_tracking.py",
+      "bytes": 5489,
+      "mode": "0o644",
+      "sha256": "11ca9f5159fde7f73d1e36d79f2be1e4dcdb70848fb177542b3a9c011d49c0d4"
+    },
+    {
+      "path": "test/test_teleop_core.py",
+      "bytes": 29230,
+      "mode": "0o644",
+      "sha256": "1c4b4eaed7e815ca31ece41b05516570988b21a55eeb7b940995eaa6b4b64e3a"
+    },
+    {
+      "path": "test/test_trajectory_limiter.py",
+      "bytes": 7699,
+      "mode": "0o644",
+      "sha256": "d8d15508fd768bf700569d894b24cba0cee44d4c835646c94f0571f8ed4ee426"
+    },
+    {
+      "path": "test/test_v4_quest_middle_profile.py",
+      "bytes": 828,
+      "mode": "0o644",
+      "sha256": "2b90b863880fb50153aa6e9ba340693b6b38e87d9d9cc25e40aadf133741c008"
+    },
+    {
+      "path": "test/test_v5_fast_follow_reset.py",
+      "bytes": 4083,
+      "mode": "0o644",
+      "sha256": "c35ee216876158ffa7bffd5b3179e04252b4c53b2d2338b64cfdc8db06759cee"
+    },
+    {
+      "path": "test/test_velocity_servo.py",
+      "bytes": 3183,
+      "mode": "0o644",
+      "sha256": "fdd0ff3cab76bdf5a6bb3bbe6fb6461f0efd5811f3bdd95e2b09b14e1f25df03"
+    },
+    {
+      "path": "test/test_waist_reclutch.py",
+      "bytes": 3758,
+      "mode": "0o644",
+      "sha256": "c19fb21a2488eee23e212303c163aee5cb74d7064011e86de6ffe492c9b186a0"
+    },
+    {
+      "path": "test/test_waist_xa_reset.py",
+      "bytes": 4540,
+      "mode": "0o644",
+      "sha256": "c30ebb773947f8b089316e5e61a0a6bdd4c88795d37791912a5fe49ceeb47888"
+    },
+    {
+      "path": "test/unified_camera_integration.py",
+      "bytes": 4380,
+      "mode": "0o644",
+      "sha256": "a372ac9dcd489d8ca1e60a55625cbafabeaaf7d1ccf8de75f50fc8310ccee209"
+    },
+    {
+      "path": "urdf/robot_v2_2.srdf",
+      "bytes": 17687,
+      "mode": "0o644",
+      "sha256": "64fcf8bd63c1a5dad27f0600008057145c94613d90f3507b192229bd04819e63"
+    },
+    {
+      "path": "urdf/robot_v2_2_simplified.urdf",
+      "bytes": 29072,
+      "mode": "0o644",
+      "sha256": "792931382c9e317b833e661c49ab45dbdd64185671b5bb9f00868ee90ef2fecc"
+    },
+    {
+      "path": "urdf/robot_v3_1.srdf",
+      "bytes": 5009,
+      "mode": "0o644",
+      "sha256": "06e19fd10682ade50faaa65966df0599038e4375253e2a2080768dc12f039042"
+    },
+    {
+      "path": "urdf/robot_v3_1.urdf",
+      "bytes": 58000,
+      "mode": "0o644",
+      "sha256": "5bf7bbf0aed16abb2f2c5651ca2c8e4c586d38a838ac089c6a8ea14e3ac30f70"
+    },
+    {
+      "path": "urdf/robot_v3_1_calibration.urdf",
+      "bytes": 57982,
+      "mode": "0o644",
+      "sha256": "60e6a03bae03818cc895d070b987c2683050684a79c948217dc4812945d2bee7"
+    },
+    {
+      "path": "urdf/robot_v3_1_simplified.urdf",
+      "bytes": 33398,
+      "mode": "0o644",
+      "sha256": "603e76da48d437e6700d0d3e374f4e8575558ad3dc8b0fbb373b1b5cdf186b94"
+    },
+    {
+      "path": "web/index.html",
+      "bytes": 4047,
+      "mode": "0o644",
+      "sha256": "8b3e99f5fa5f1296541898b66300adbf9de34d612ce1a58e3f18d3442f4adf23"
+    },
+    {
+      "path": "web/styles.css",
+      "bytes": 5167,
+      "mode": "0o644",
+      "sha256": "fab6f41432e588b3932922d472193f0e2cd6b98f0cc0fd526f37a5dda97d8ae7"
+    },
+    {
+      "path": "web/vendor/aframe.min.js",
+      "bytes": 1277895,
+      "mode": "0o644",
+      "sha256": "c91933d54a265cd641106d9d0ab98f7cda67ac16509757ee278384c2e6041785"
+    },
+    {
+      "path": "web/vr_app.js",
+      "bytes": 105135,
+      "mode": "0o644",
+      "sha256": "5feeb532d92752aaff0cea620baa02604528b9e3de5e6b530355f2063f8f9093"
+    },
+    {
+      "path": "web/vr_monitor.html",
+      "bytes": 4552,
+      "mode": "0o644",
+      "sha256": "0c8392020d4592f1b3c07c0a6d4fb0a7275fcb610bde530cdaa5081902a4e870"
+    },
+    {
+      "path": "web/vr_monitor.js",
+      "bytes": 3612,
+      "mode": "0o644",
+      "sha256": "79c742d5b5f5720800b8a23cfd9cabf21096c9f9d6be59c7d5580c07f9454f7b"
+    },
+    {
+      "path": "web/web/index.html",
+      "bytes": 2363,
+      "mode": "0o644",
+      "sha256": "c4c25ac81f67802609080c8d58c0ce0c46a967baf932e49b0c3c1a6379bb6c86"
+    },
+    {
+      "path": "web/web/styles.css",
+      "bytes": 3992,
+      "mode": "0o644",
+      "sha256": "3d4bd32a31b45425841bf3b9a97c3fbc1bbeff541be95dd68cac2bf7412cea42"
+    },
+    {
+      "path": "web/web/vendor/aframe.min.js",
+      "bytes": 1277895,
+      "mode": "0o644",
+      "sha256": "c91933d54a265cd641106d9d0ab98f7cda67ac16509757ee278384c2e6041785"
+    },
+    {
+      "path": "web/web/vr_app.js",
+      "bytes": 48906,
+      "mode": "0o644",
+      "sha256": "1696a94c5eb5169f40eb15583f80d25d4f33c4badf62f20ac2a71660650e60bc"
+    }
+  ],
+  "publication_path_overrides": {
+    "README.md": "README_ROBOT_SNAPSHOT.md"
+  },
+  "validation": {
+    "source_file_hashes_verified": 170,
+    "python_syntax_passed": 85,
+    "hardware_motion_tested_for_publication": false
+  }
+}

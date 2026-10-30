@@ -60,6 +60,9 @@ class ShoulderReachMapper(QuestIncrementalArmMapper):
             self.h0 = self.human_vector(sample, body_position)
             self.shoulder0 = self.geometry['shoulder'].copy()
             self.r0 = self.robot_origin_position-self.shoulder0
+            if np.linalg.norm(self.r0) > self.geometry['reach']:
+                self.spherical = False
+                self.retarget_status['reason'] = 'current reach exceeds calibrated sphere; relative mapping retained'
             if np.linalg.norm(self.h0) > .93*self.human_length and np.linalg.norm(self.r0) < .9*self.geometry['reach']:
                 # Never straighten a bent physical arm merely because Grip was
                 # pressed with an already extended human arm.
@@ -73,6 +76,8 @@ class ShoulderReachMapper(QuestIncrementalArmMapper):
             return target,reason or self.retarget_status.get('reason','')
         if body_position is None:
             return None, 'fresh HMD position required for shoulder mapping'
+        if self._holding_clutch_origin(sample, body_position):
+            return self._held_origin_target()
         h = self.human_vector(sample, body_position)
         if np.linalg.norm(h) < .08:
             return None, 'controller too close to estimated shoulder'

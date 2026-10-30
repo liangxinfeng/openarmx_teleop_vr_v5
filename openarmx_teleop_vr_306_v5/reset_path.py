@@ -62,8 +62,8 @@ def conservative_reset_duration(
 def feedback_bounded_reset_progress(start, goal, measured, previous, proposed, lead):
     """Limit the shared waist/leg path phase by its slowest measured joint.
 
-    All three height joints keep one path parameter. Do not independently
-    accelerate the ankle/waist past a slow knee, or advance time during a stall.
+    All leg and waist joints keep one path parameter. Do not independently
+    accelerate the waist past measured feedback, or advance during a stall.
     Arm-only reset retains its original clock.
     """
     start, goal, measured = [np.asarray(v, dtype=float) for v in (start, goal, measured)]
@@ -73,11 +73,11 @@ def feedback_bounded_reset_progress(start, goal, measured, previous, proposed, l
         raise ValueError('reset progress and lead must be finite; lead must be positive')
     previous = float(np.clip(previous, 0, 1))
     proposed = float(np.clip(proposed, previous, 1))
-    delta = goal[:3] - start[:3]
+    delta = goal[:4] - start[:4]
     moving = np.abs(delta) > 1.e-6
     if not np.any(moving):
         return proposed
-    allowed_blend = np.min(((measured[:3] - start[:3]) / np.where(moving, delta, 1)
+    allowed_blend = np.min(((measured[:4] - start[:4]) / np.where(moving, delta, 1)
                             + lead / np.maximum(np.abs(delta), 1.e-6))[moving])
     if smoothstep5(proposed) <= allowed_blend:
         return proposed

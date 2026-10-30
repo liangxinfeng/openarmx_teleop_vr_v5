@@ -39,9 +39,11 @@ class QuestIncrementalArmMapper(ArmMapper):
         self.target_position = None
         self.unprojected_position = None
         self.target_orientation = None
+        self._clutch_motion_started = False
 
     def latch(self, sample, current_pose, body_position=None):
         super().latch(sample, current_pose, body_position=body_position)
+        self._clutch_motion_started = False
         self.previous_controller_position = sample.position.copy()
         self.previous_controller_orientation = normalized_quaternion(
             sample.orientation
@@ -50,6 +52,28 @@ class QuestIncrementalArmMapper(ArmMapper):
         self.target_position = self.robot_origin_position.copy()
         self.unprojected_position = self.robot_origin_position.copy()
         self.target_orientation = self.robot_origin_orientation.copy()
+
+    def _holding_clutch_origin(self, sample, body_position):
+        """One-time intent gate, not a continuous deadband or a new reference.
+
+        Holding Grip must not project an already-held pose to a workspace face
+        or amplify tracking jitter. Once movement starts, preserve every delta
+        (including the initial small displacement) until this Grip is released.
+        """
+        if self._clutch_motion_started:
+            return False
+        delta = self._finite_delta(sample.position, 'controller position')-self.vr_origin_position
+        body = self._body_position(body_position)
+        if body is not None and self.body_origin_position is not None:
+            delta -= body-self.body_origin_position
+        orientation = normalized_quaternion(sample.orientation)
+        angle = 2.*np.arccos(np.clip(abs(float(orientation @ self.vr_origin_orientation)),0.,1.))
+        self._clutch_motion_started = bool(np.linalg.norm(delta) > .002 or angle > np.deg2rad(.7))
+        return not self._clutch_motion_started
+
+    def _held_origin_target(self):
+        return {'position': self.robot_origin_position.copy(),
+                'orientation': self.robot_origin_orientation.copy()}, ''
 
     @staticmethod
     def _finite_delta(value, label):
@@ -61,6 +85,8 @@ class QuestIncrementalArmMapper(ArmMapper):
     def map(self, sample, body_position=None):
         if not self.latched or self.target_position is None:
             raise RuntimeError('controller origin has not been latched')
+        if self._holding_clutch_origin(sample, body_position):
+            return self._held_origin_target()
 
         controller_position = self._finite_delta(
             sample.position, 'controller position'

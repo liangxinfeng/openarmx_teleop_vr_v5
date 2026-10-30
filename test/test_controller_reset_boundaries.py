@@ -107,8 +107,9 @@ def test_quick_reset_completion_waits_for_physical_neck():
 def test_quick_reset_and_gripper_hold_reset_keep_body_height():
     start_source = _source('_start_quick_reset_locked')
     vector_source = _source('_reset_vector')
-    assert "groups['leg_waist'][2:4]" not in start_source
-    assert "get_parameter('quick_reset_waist_joints')" not in start_source
+    assert "groups['leg_waist'][2:4]" in start_source
+    assert "get_parameter('quick_reset_waist_joints')" in start_source
+    assert 'waist_reset_reference' in start_source
     assert "groups['leg_waist']" not in vector_source
     assert "groups['leg_waist'][:3] = 0.0" not in start_source
     assert 'measured_reverse_squat(' in start_source

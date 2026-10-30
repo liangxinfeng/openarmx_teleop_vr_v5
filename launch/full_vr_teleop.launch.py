@@ -231,7 +231,7 @@ def generate_launch_description():
                 'diagnostic override.'
             )),
         DeclareLaunchArgument(
-            'waist_forward_assist_max_lean_deg', default_value='6.0',
+            'waist_forward_assist_max_lean_deg', default_value='12.0',
             description='Maximum forward waist pitch assist in degrees.'),
         DeclareLaunchArgument(
             'waist_forward_assist_command_lead_deg', default_value='8.0',

@@ -26,6 +26,9 @@ exec(compile(ast.Module(body=[n for n in controller.body
     if isinstance(n, ast.FunctionDef) and n.name in names], type_ignores=[]),
     str(SOURCE), 'exec'), namespace)
 
+from openarmx_teleop_vr_306_v5.waist_follow_state import held_waist_assist
+namespace['held_waist_assist'] = held_waist_assist
+
 class Harness:
     def __init__(self):
         self._lock = threading.RLock()

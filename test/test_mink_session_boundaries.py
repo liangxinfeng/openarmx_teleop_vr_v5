@@ -85,6 +85,7 @@ def make_controller():
     node._velocity_active_sides = {'left', 'right'}
     node._latest_target_mailbox = Mailbox()
     node._limiter = Limiter()
+    node._arm_smoother = SimpleNamespace(rebase_side=lambda side, values: None)
     node._target_velocity_estimator = VelocityEstimator()
     node._target_velocity_estimate = np.zeros(21)
     measured = dict(left_arm=np.ones(7), right_arm=np.full(7, 2.),

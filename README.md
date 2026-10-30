@@ -1,21 +1,23 @@
-# OpenArmX VR 遥操作 V5
+# OpenArmX VR 遥操作 V5 — 345 当前源码快照
 
-本仓库的 `v5` 分支保存 345 机器人上 V5 遥操测试功能包的源码快照。历史 V4 代码保留在 `v4` 分支；原有 `main` 与机器人版本分支的提交历史也保留。
+本分支 `robot345-v5-20261030` 保存 2026-10-30 从 345 机器人读取的当前 V5 功能包。它在现有 `v5` 提交历史上新增；`v5`、`v4`、`main` 及其他原有分支不变。
 
-为保持与现有 ROS 2 启动文件和依赖兼容，V5 快照中的 ROS 功能包和 Python 模块仍命名为 `openarmx_teleop_vr_306_v5`。GitHub 仓库名不等同于 ROS 包名。
+ROS 功能包和 Python 模块名仍为 `openarmx_teleop_vr_306_v5`，保持现有启动文件、ROS 话题和上层依赖兼容。GitHub 仓库名为 `openarmx_teleop_vr_v5`。
 
-## 功能与实现
+## 本次快照
 
-- WebXR 头显与手柄输入，经 WebSocket / WebRTC 传输至 ROS 2；支持双臂 Grip 接管、夹爪及头部跟随。
-- 双臂七自由度遥操作使用 Mink 微分逆运动学和 quadprog；MuJoCo 用于运动学模型，不运行物理仿真。具体任务和约束见 [V5_MINK.md](V5_MINK.md)。
-- 支持按 Grip 会话锁定臂形参考、反馈约束、失联保持及 X+A 复位路径检查。腰部前倾辅助的参数位于 `config/controller.yaml`。
-- 本仓库是独立 V5 遥操测试包；345 的 VR 遥操导航界面、航点、地图和导航专用启动参数属于另一个功能包，不包含在此快照中。
+- 包含当前 Grip 接管与目标映射、手臂跟随、近伸直姿态约束、腰部补偿及 X+A 复位相关实现。
+- 当前源码配置的腰部前倾补偿上限为 12°，包含重复接管时的腰部参考处理；实际启动入口仍可能覆盖参数。
+- 保留原有代码、配置、模型、测试、网页和第三方声明，未为上传修改机器人算法或运行参数。
+- 具体文件差异、来源和验证范围见 [本次发布说明](SNAPSHOT_345_20261030.md)。
 
-## 依赖和启动
+## 依赖与范围
 
-本包依赖 ROS 2、机器人原厂服务、机器人模型与 `control_center_joint_control`。它使用机器人环境中已有的 Pinocchio 等本地依赖；Mink 环境版本见 `requirements-mink.txt` 和 `scripts/setup_v5_mink_env.sh`。迁移至其他机器时，请先核对型号、关节限位、SDK、话题后缀与各脚本的本地路径。
+需要 ROS 2、机器人原厂服务、`control_center_joint_control` 及相应机器人模型和运动学环境。Mink/quadprog 等依赖见 `requirements-mink.txt` 与 `scripts/setup_v5_mink_env.sh`。MuJoCo 在本包中用于相关运动学求解，不代表运行整机物理仿真。
 
-在 ROS 2 工作空间内安装依赖并编译后，可先使用模拟模式检查启动：
+这是独立 V5 遥操功能包，不是完整机器人系统镜像。VR 遥操导航上层界面、导航地图、抓取与动作编排器、用户录制轨迹、机外环境以及原厂服务配置不在此快照中。345 上层 VR 遥操导航可以依赖本包，但须另外部署其自身功能包。
+
+迁移前核对原厂 SDK、关节定义、机器人型号、话题后缀及脚本路径。安装依赖并编译后，可先运行无动作模式：
 
 ```bash
 cd ~/ros2_ws
@@ -24,10 +26,10 @@ source install/setup.bash
 ros2 launch openarmx_teleop_vr_306_v5 full_vr_teleop.launch.py dry_run:=true
 ```
 
-启动文件默认网页端口为 `8447`。真机运行需要对应机器人配置、原厂服务以及现场验证；模拟启动不代表真机可安全运行。
+默认网页端口为 8447；模拟启动检查不等同于真机动作验收。
 
-## 快照说明
+## 历史文档与来源
 
-代码取自 345 机器人 `ros2_ws/src/openarmx_teleop_vr_306_v5`，采集日期 2026-10-28。仓库文档更新了本首页；源功能包没有在机器人上改名。`README_HISTORICAL_SNAPSHOT.md`、`V5_VALIDATION.json` 等历史文档保留原样，其旧版本算法描述或测试结果不应视为本次快照的最新验收结论。
+机器人原有首页保存在 [README_ROBOT_SNAPSHOT.md](README_ROBOT_SNAPSHOT.md)。`V5_CHANGES.md`、`V5_NATURAL_REACH.md`、`V5_VALIDATION.json` 等为不同时间的历史说明，可能包含旧算法描述或旧测试结果；它们不代表本次重新完成了全部功能验收。
 
-来源和第三方许可见 [NOTICE](NOTICE) 与 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)。
+本次源码校验清单见 [SOURCE_SNAPSHOT_345_20261030.json](SOURCE_SNAPSHOT_345_20261030.json)。第三方来源和许可见 [NOTICE](NOTICE) 与 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)。

@@ -32,7 +32,7 @@ class ArmTargetSmoother:
         self._limiter.reset_indices(indices, measured)
         self._active.discard(side)
 
-    def step(self, measured, desired, lead, dt, active_sides):
+    def step(self, measured, desired, lead, dt, active_sides, target_velocity=None):
         measured = np.asarray(measured, dtype=float)
         desired = np.asarray(desired, dtype=float)
         lead = np.asarray(lead, dtype=float)
@@ -52,6 +52,22 @@ class ArmTargetSmoother:
                 indices = list(idx)
                 self._limiter.reset_indices(indices, measured[indices])
         safe_target = bounded_target_by_feedback(measured, desired, lead)
+        if target_velocity is not None:
+            velocity = np.asarray(target_velocity, dtype=float)
+            if velocity.shape != (14,) or not np.all(np.isfinite(velocity)):
+                raise ValueError('invalid target velocity')
+            velocity = np.clip(velocity, -self._limiter.max_velocity, self._limiter.max_velocity)
+            # Compensate at most one output cycle of smoothing lag. No new
+            # speed, acceleration or feedback-lead allowance is introduced.
+            # Only continue an already advancing reference; never predict a
+            # first clutch, reversal, stopped or feedback-clamped target.
+            advancing = ((safe_target-self._limiter.position)*velocity > 0.)
+            advancing &= np.abs(safe_target-desired) < 1.e-9
+            for side, idx in (('left', range(7)), ('right', range(7,14))):
+                if side not in active or side not in self._active:
+                    advancing[list(idx)] = False
+            preview = np.where(advancing, velocity*min(dt,.02), 0.)
+            safe_target = bounded_target_by_feedback(measured, safe_target+preview, lead)
         out = self._limiter.step(safe_target, min(dt, .02))
         bounded = bounded_target_by_feedback(measured, out, lead)
         changed = np.flatnonzero(np.abs(bounded-out) > 1e-9)

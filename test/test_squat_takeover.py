@@ -30,6 +30,7 @@ def test_session_rebases_neutral_not_zero(height):
     c=NS(_build_motion_controller_state=Mock(return_value={}),
          _grip_ik=GripSessionIK(),_latest_target_mailbox=NS(reset=Mock()),_commit_motion_controller_state=Mock(),
          _velocity_active_sides=set(),_waist_follow_enabled=True,
+         _waist_follow_neutral_pitch_deg=None,
          _waist_follow_profile='forward_pitch_only')
     Controller._begin_fresh_teleop_session_locked(c,g)
     assert c._waist_follow_neutral_pitch_deg==g['leg_waist'][2]
@@ -43,7 +44,7 @@ def test_both_reset_chords_preserve_measured_crouch(height,hold):
     g=groups(height);g['leg_waist'][3]=12.
     params=dict(quick_reset_left_arm_joints=[40,0,10,130,0,0,0],
         quick_reset_right_arm_joints=[-40,0,-10,-130,0,0,0],
-        quick_reset_neck_joints=[0,-30,0],quick_reset_open_grippers=True,
+        quick_reset_neck_joints=[0,-30,0],quick_reset_open_grippers=True,quick_reset_waist_joints=[0.,0.],
         quick_reset_gripper_open_position=10,gripper_min_position=10,gripper_max_position=360)
     def path(start,goal):
         return '',dict(start=Controller._group_vector(start),goal=Controller._group_vector(goal),duration_sec=12.)
@@ -57,17 +58,18 @@ def test_both_reset_chords_preserve_measured_crouch(height,hold):
         _deactivate_body_height_locked=Mock(),_velocity_active_sides=set(),
         _waist_follow_enabled=True,_waist_follow_profile='forward_pitch_only',
         _gripper_targets={'left':240.,'right':180.})
-    assert Controller._start_quick_reset_locked(c,10.,NS(as_dict=lambda:g),preserve_grippers=hold)==''
-    np.testing.assert_allclose(c._target_groups['leg_waist'],g['leg_waist'])
+    assert Controller._start_quick_reset_locked(c,10.,NS(as_dict=lambda:g),preserve_grippers=hold,source='hold_gripper_reset' if hold else 'quick_reset')==''
+    expected=g['leg_waist'].copy();expected[3]=12. if hold else 0.
+    np.testing.assert_allclose(c._target_groups['leg_waist'],expected)
     assert c._body_height_reverse_mode == (height < 0)
-    assert c._target_groups['leg_waist'][3]==12.
+    assert c._target_groups['leg_waist'][3]==(12. if hold else 0.)
     assert c._waist_follow_pitch_target_deg==c._waist_follow_neutral_pitch_deg
     assert c._gripper_targets==({'left':240.,'right':180.} if hold else {'left':10.,'right':10.})
     start = c._reset_path_start
     goal = c._reset_path_goal
     for phase in np.linspace(0., 1., 21):
-        np.testing.assert_allclose(continuous_direct_reset(start, goal, phase)[:4],
-                                   g['leg_waist'])
+        np.testing.assert_allclose(continuous_direct_reset(start, goal, phase)[:3],
+                                   g['leg_waist'][:3])
 
 
 @pytest.mark.parametrize('height',[-.53,-.3,.3,.5])

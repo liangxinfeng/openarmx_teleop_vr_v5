@@ -565,7 +565,9 @@ class IndependentVrMapper(Node):
 
     def _on_eef_feedback(self, message):
         try:
-            poses = parse_eef_feedback(json.loads(message.data))
+            payload = json.loads(message.data)
+            reference = payload.get('mapping_reference', payload)
+            poses = parse_eef_feedback(reference)
             if not all(side in poses for side in ('left', 'right')):
                 raise ValueError('left or right FK pose is missing')
         except Exception as exc:
@@ -573,7 +575,7 @@ class IndependentVrMapper(Node):
             return
         with self._lock:
             self._current_poses = poses
-            for side,geometry in json.loads(message.data).get('arm_geometry',{}).items():
+            for side,geometry in reference.get('arm_geometry',{}).items():
                 if side in self._mappers:self._mappers[side].set_geometry(geometry)
             self._last_eef_time = self._now()
 
@@ -1223,6 +1225,9 @@ class IndependentVrMapper(Node):
                     if body_position is not None:
                         mapping_body_position = operator_rotation @ body_position
                 if not mapper.latched:
+                    if now-self._last_eef_time > .06:
+                        self._last_reason = 'waiting for fresh FK before Grip takeover'
+                        continue
                     mapper.latch(
                         mapping_sample,
                         self._current_poses[side],

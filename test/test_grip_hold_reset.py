@@ -52,6 +52,7 @@ def test_reset_preserves_closed_targets_only_for_new_mode(preserve):
     params={'quick_reset_left_arm_joints':[40,0,0,130,0,0,0],
             'quick_reset_right_arm_joints':[-40,0,0,-130,0,0,0],
             'quick_reset_neck_joints':[0,-30,0], 'quick_reset_open_grippers':True,
+            'quick_reset_waist_joints':[0.,0.],
             'quick_reset_gripper_open_position':10,'gripper_min_position':10,'gripper_max_position':360}
     groups={'left_arm':np.zeros(7),'right_arm':np.zeros(7),'neck':np.zeros(3),
             'leg_waist':np.zeros(4),'left_gripper':np.array([80.]),'right_gripper':np.array([90.])}

@@ -46,8 +46,10 @@ from .schema import (
     parse_joint_feedback,
 )
 from .teleop_core import forward_reach_to_waist_pitch, vr_input_is_fresh
+from .waist_follow_state import waist_reanchor_x, waist_reset_reference, held_waist_assist
 from .trajectory_limiter import TrajectoryLimiter, bounded_target_by_feedback
 from .teleop_smoother import ArmTargetSmoother
+from .arm_reference_frame import arm_reference_groups
 from .velocity_servo import VelocityServo, lookahead_reference
 
 
@@ -67,6 +69,18 @@ def _vr345_callback_timing(callback):
                     f'feedback_age={time.monotonic() - getattr(self, "_feedback_time", 0.0):.4f}'
                 )
     return measured
+
+
+def _waist_assist_window_active(enabled, profile, neutral, target,
+                                source, released, measured, feedback_fresh):
+    """Keep bounded following through physical return, never after release."""
+    if not enabled or profile != 'forward_pitch_only' or neutral is None or target is None:
+        return False
+    if float(target) > float(neutral) + 1.e-3:
+        return True
+    return bool(source == 'cartesian_ik' and not {'left', 'right'}.issubset(released)
+                and measured is not None and feedback_fresh
+                and float(measured) > float(neutral) + 1.e-3)
 
 
 def classify_teleop_heartbeat(payload, maximum_age):
@@ -214,7 +228,6 @@ class IndependentArmController(Node):
         self._limiter = None
         # Separate waist trajectory state: direct arm mode bypasses the
         # general limiter, so it must not bypass the waist limiter too.
-        self._waist_assist_limiter = None
         self._enable_pending = False
         self._enable_hold_groups = None
         self._enable_started = 0.0
@@ -286,6 +299,7 @@ class IndependentArmController(Node):
             raise ValueError(
                 'waist_follow_profile must be ik_pitch_yaw or forward_pitch_only'
             )
+        self._waist_assist_limiter = None
         self._waist_follow_neutral_pitch_deg = None
         self._waist_follow_locked_yaw_deg = None
         self._waist_follow_anchor_x = {'left': None, 'right': None}
@@ -613,13 +627,17 @@ class IndependentArmController(Node):
             'waist_follow_profile': 'forward_pitch_only',
             'waist_forward_assist_start_x_m': 0.28,
             'waist_forward_assist_full_x_m': 0.52,
-            'waist_forward_assist_start_extension_m': 0.20,
-            'waist_forward_assist_full_extension_m': 0.26,
-            'waist_forward_assist_max_lean_deg': 10.0,
+            'waist_forward_assist_start_extension_m': 0.06,
+            'waist_forward_assist_full_extension_m': 0.24,
+            'waist_forward_assist_max_lean_deg': 12.0,
+            'waist_assist_max_velocity_deg_sec': 18.0,
+            'waist_assist_max_acceleration_deg_sec2': 30.0,
+            'waist_assist_feedback_lead_deg': 6.0,
+            'quick_reset_waist_velocity_deg_sec': 5.0,
+            'quick_reset_waist_acceleration_deg_sec2': 12.0,
+            'quick_reset_waist_jerk_deg_sec3': 60.0,
             'waist_forward_assist_upright_pitch_deg': 0.0,
             'waist_forward_assist_command_lead_deg': 8.0,
-            'waist_assist_max_velocity_deg_sec': 3.0,
-            'waist_assist_max_acceleration_deg_sec2': 9.0,
             'body_height_control_enabled': False,
             'body_height_lowering_rate_m_sec': 0.10,
             'body_height_command_timeout_sec': 0.25,
@@ -832,13 +850,20 @@ class IndependentArmController(Node):
         }
 
     def _quick_reset_limit_vector(self, common_parameter, neck_parameter):
-        """Return reset limits with a separate neck-only speed tier."""
+        """Return reset limits with separate neck and waist tiers."""
         limits = np.full(
             21,
             float(self.get_parameter(common_parameter).value),
             dtype=float,
         )
         limits[18:21] = float(self.get_parameter(neck_parameter).value)
+        waist_parameter = {
+            'quick_reset_max_velocity_deg_sec': 'quick_reset_waist_velocity_deg_sec',
+            'quick_reset_max_acceleration_deg_sec2': 'quick_reset_waist_acceleration_deg_sec2',
+            'quick_reset_max_jerk_deg_sec3': 'quick_reset_waist_jerk_deg_sec3',
+        }.get(common_parameter)
+        if waist_parameter:
+            limits[2:4] = float(self.get_parameter(waist_parameter).value)
         return limits
 
     def _make_limiter(self, groups):
@@ -1015,7 +1040,8 @@ class IndependentArmController(Node):
         self._last_ik = None
         if self._waist_follow_enabled and self._waist_follow_profile == 'forward_pitch_only':
             waist = np.asarray(groups['leg_waist'], dtype=float)
-            self._waist_follow_neutral_pitch_deg = float(waist[2])
+            if self._waist_follow_neutral_pitch_deg is None:
+                self._waist_follow_neutral_pitch_deg = float(waist[2])
             self._waist_follow_locked_yaw_deg = float(waist[3])
             self._waist_follow_pitch_target_deg = float(waist[2])
 
@@ -1143,14 +1169,14 @@ class IndependentArmController(Node):
 
         X+A and post-enable reset both command the configured neck default, so
         all three neck axes are completion gates together with both arms.
-        X+A includes the three coordinated height joints. Y+B keeps those
-        goals at their measured values, so it does not request standing up.
+        Both leg joints hold their measured values. X+A resets both waist axes;
+        Y+B keeps the waist at its measured pose.
         This prevents active head-follow from taking over before the physical
         neck has actually reached its reset pose.
         """
         return np.concatenate([
             IndependentArmController._reset_vector(groups),
-            np.asarray(groups['leg_waist'], dtype=float)[:3],
+            np.asarray(groups['leg_waist'], dtype=float)[:4],
         ])
 
     def _configuration_guard_error(
@@ -1263,7 +1289,7 @@ class IndependentArmController(Node):
             guard_error, q = self._configuration_guard_error(
                 groups,
                 'quick reset direct path',
-                limit_joint_names=ARM_JOINT_NAMES + list(BODY_HEIGHT_JOINT_NAMES),
+                limit_joint_names=ARM_JOINT_NAMES + list(BODY_HEIGHT_JOINT_NAMES) + ['Joint_Waist_Yaw'],
             )
             if guard_error:
                 return f'direct quick-reset path is unsafe: {guard_error}', None
@@ -1301,6 +1327,10 @@ class IndependentArmController(Node):
                 float(self.get_parameter(
                     'quick_reset_minimum_path_duration_sec').value),
             )
+            waist_velocity = float(self.get_parameter('quick_reset_waist_velocity_deg_sec').value)
+            if not np.isfinite(waist_velocity) or waist_velocity <= 0.0:
+                raise ValueError('invalid waist reset speed')
+            duration = max(duration, 1.875 * float(np.max(np.abs(goal[2:4]-start[2:4]))) / waist_velocity)
         except Exception as exc:
             return f'quick reset duration calculation failed: {exc}', None
         return '', {
@@ -1392,6 +1422,17 @@ class IndependentArmController(Node):
                 self._state = 'DRY_RUN' if self._dry_run else 'DISARMED'
                 self._reason = 'feedback connected; waiting for target'
             publish_fk = now - self._last_eef_feedback_publish >= 0.02
+            # Snapshot the exact torso convention used by the arm IK. Physical
+            # FK below remains truthful; the mapper gets a separate reference.
+            mapping_groups = feedback.as_dict()
+            if self._waist_follow_enabled and self._waist_follow_profile == 'forward_pitch_only':
+                neutral = self._waist_follow_neutral_pitch_deg
+                if (self._body_height_active and self._body_height_joint_targets is not None
+                        and now-self._body_height_command_time <= float(self.get_parameter(
+                            'body_height_command_timeout_sec').value)):
+                    neutral = float(self._body_height_joint_targets[2])
+                mapping_groups = arm_reference_groups(
+                    mapping_groups, neutral, self._waist_follow_locked_yaw_deg)
 
         if publish_fk:
             try:
@@ -1409,6 +1450,17 @@ class IndependentArmController(Node):
                 }
                 from .arm_geometry import arm_geometry
                 payload['arm_geometry'] = arm_geometry(self._kinematics.model, q)
+                mapping_q = self._kinematics.q_from_feedback(mapping_groups, clip=False)
+                mapping_poses = poses if np.array_equal(mapping_q, q) else self._kinematics.eef_poses(mapping_q)
+                payload['mapping_reference'] = {
+                    'pos_left_in_robot': mapping_poses['left']['position'],
+                    'quat_left_in_robot': mapping_poses['left']['orientation'],
+                    'pos_right_in_robot': mapping_poses['right']['position'],
+                    'quat_right_in_robot': mapping_poses['right']['orientation'],
+                    'arm_geometry': (payload['arm_geometry'] if np.array_equal(mapping_q, q)
+                                     else arm_geometry(self._kinematics.model, mapping_q)),
+                    'frame_convention': 'same_neutral_torso_as_arm_ik',
+                }
                 self._eef_feedback_pub.publish(
                     String(data=json.dumps(payload, separators=(',', ':')))
                 )
@@ -1657,12 +1709,22 @@ class IndependentArmController(Node):
                     waist_neutral_pitch = float(measured_waist[2])
                 if waist_locked_yaw is None:
                     waist_locked_yaw = float(measured_waist[3])
+                waist_budget = min(
+                    12.0, float(self.get_parameter('waist_forward_assist_max_lean_deg').value),
+                    max(0.0, float(np.rad2deg(self._ik_kinematics.upper[
+                        self._ik_kinematics.joint_q['Joint_Waist_Pitch']])) - waist_neutral_pitch),
+                )
                 with self._lock:
                     anchor_x = dict(self._waist_follow_anchor_x)
                 for side, pose in targets.items():
                     target_x = float(np.asarray(pose[0], dtype=float)[0])
                     if side in reanchor_sides or anchor_x.get(side) is None:
-                        anchor_x[side] = target_x
+                        anchor_x[side] = waist_reanchor_x(
+                            target_x, measured_waist[2], waist_neutral_pitch,
+                            self.get_parameter('waist_forward_assist_start_extension_m').value,
+                            self.get_parameter('waist_forward_assist_full_extension_m').value,
+                            waist_budget,
+                        )
                 forward_extension = max(
                     max(0.0, float(np.asarray(pose[0], dtype=float)[0])
                         - float(anchor_x[side]))
@@ -1675,28 +1737,14 @@ class IndependentArmController(Node):
                         'waist_forward_assist_start_extension_m').value,
                     self.get_parameter(
                         'waist_forward_assist_full_extension_m').value,
-                    min(float(self.get_parameter('waist_forward_assist_max_lean_deg').value),
-                        max(0.0, float(np.rad2deg(self._ik_kinematics.upper[
-                            self._ik_kinematics.joint_q['Joint_Waist_Pitch']]))
-                            - waist_neutral_pitch)),
+                    waist_budget,
                     self.get_parameter(
                         'waist_forward_assist_upright_pitch_deg'
                     ).value,
                 )
                 waist_yaw_target = waist_locked_yaw
-                seed_groups = {
-                    key: np.asarray(value, dtype=float).copy()
-                    for key, value in seed_groups.items()
-                }
-                seed_groups['leg_waist'][2] = waist_neutral_pitch
-                seed_groups['leg_waist'][3] = waist_locked_yaw
-                with self._lock:
-                    if self._waist_follow_enabled:
-                        self._waist_follow_neutral_pitch_deg = waist_neutral_pitch
-                        self._waist_follow_locked_yaw_deg = waist_locked_yaw
-                        self._waist_follow_anchor_x = anchor_x
-                        self._waist_follow_extension_m = forward_extension
-                        self._waist_follow_pitch_target_deg = waist_pitch_target
+                seed_groups = arm_reference_groups(
+                    seed_groups, waist_neutral_pitch, waist_locked_yaw)
             measured_seed = self._ik_kinematics.q_from_feedback(seed_groups)
             with self._lock:
                 if (not self._latest_target_mailbox.is_latest(sequence)
@@ -1837,6 +1885,13 @@ class IndependentArmController(Node):
                 if not self._grip_ik.commit(ticket, result.q):
                     return
                 self._ik_kinematics.commit_retarget_state()
+                if waist_pitch_target is not None and self._waist_follow_enabled:
+                    # Rejected/late solves may not mutate the waist reference.
+                    self._waist_follow_neutral_pitch_deg = waist_neutral_pitch
+                    self._waist_follow_locked_yaw_deg = waist_locked_yaw
+                    self._waist_follow_anchor_x = anchor_x
+                    self._waist_follow_extension_m = forward_extension
+                    self._waist_follow_pitch_target_deg = waist_pitch_target
                 self._target_groups = accepted_groups
                 self._velocity_active_sides = set(targets)
                 self._target_time = received_at
@@ -1928,12 +1983,9 @@ class IndependentArmController(Node):
         ):
             # Releasing both hands is a hold, not an implicit body movement.
             # A deliberate height command retains ownership when active.
-            neutral_pitch = float(
-                self._body_height_joint_targets[2]
-                if self._body_height_active and self._body_height_joint_targets is not None
-                else measured['leg_waist'][2]
-            )
-            self._waist_follow_neutral_pitch_deg = neutral_pitch
+            neutral_pitch = float(measured['leg_waist'][2])
+            # Keep the existing body-height baseline. Holding a bent torso
+            # must not turn its assist into a new neutral on the next Grip.
             groups['leg_waist'][2] = neutral_pitch
             self._waist_follow_pitch_target_deg = neutral_pitch
             self._waist_follow_extension_m = 0.0
@@ -2100,9 +2152,10 @@ class IndependentArmController(Node):
             self._waist_follow_locked_yaw_deg = float(waist[3])
             self._waist_follow_anchor_x = {'left': None, 'right': None}
             self._waist_follow_extension_m = 0.0
-            self._waist_follow_pitch_target_deg = neutral_pitch
+            self._waist_follow_pitch_target_deg = float(waist[2])
         self._body_height_active = False
         self._body_height_watchdog_stopped = False
+        self._body_height_watchdog_hold = None
         self._body_height_joint_targets = None
         self._body_height_input_absolute = False
         self._body_height_command_time = 0.0
@@ -2127,20 +2180,30 @@ class IndependentArmController(Node):
             self.get_parameter('body_height_command_timeout_sec').value)
         if stale and not self._body_height_watchdog_stopped:
             held = np.asarray(feedback.as_dict()['leg_waist'][:3], dtype=float).copy()
-            self._body_height_joint_targets = held
-            self._body_height_lowering_m = estimate_body_lowering((*held, 0.0), signed=True)
+            assist = held_waist_assist(
+                held[2], self._waist_follow_neutral_pitch_deg,
+                self._waist_follow_pitch_target_deg)
+            self._body_height_watchdog_hold = held.copy()
+            self._body_height_joint_targets = held.copy()
+            self._body_height_joint_targets[2] -= assist
+            self._body_height_lowering_m = estimate_body_lowering(
+                (*self._body_height_joint_targets, 0.0), signed=True)
             self._body_height_command_progress = (
                 self._body_height_lowering_m / MAX_BODY_LOWERING_M)
             self._body_height_last_direction = 0.0
             self._body_height_command_lead_deg = float(
                 self.get_parameter('body_height_hold_command_lead_deg').value)
             self._body_height_update_time = now
-            self._waist_follow_neutral_pitch_deg = float(held[2])
+            self._waist_follow_neutral_pitch_deg = float(held[2]) - assist
             self._waist_follow_pitch_target_deg = float(held[2])
             self._waist_follow_extension_m = 0.0
             self._waist_follow_anchor_x = {'left': None, 'right': None}
             self._body_height_watchdog_stopped = True
         target = np.asarray(self._body_height_joint_targets, dtype=float).copy()
+        if stale:
+            # Hold the measured pose, while retaining a separate neutral for
+            # the next height/Grip session. Do not count assist twice.
+            return np.asarray(self._body_height_watchdog_hold, dtype=float).copy()
         if (not stale and self._waist_follow_enabled
                 and self._waist_follow_profile == 'forward_pitch_only'
                 and self._waist_follow_pitch_target_deg is not None
@@ -2196,6 +2259,10 @@ class IndependentArmController(Node):
                         self._feedback.as_dict()['leg_waist'][:3], dtype=float).copy()
                     if self._target_groups is not None:
                         self._target_groups['leg_waist'][:3] = self._body_height_joint_targets
+                    self._body_height_joint_targets[2] -= held_waist_assist(
+                        self._body_height_joint_targets[2],
+                        self._waist_follow_neutral_pitch_deg,
+                        self._waist_follow_pitch_target_deg)
                 self._deactivate_body_height_locked()
                 return
             if (
@@ -2395,6 +2462,7 @@ class IndependentArmController(Node):
                 return
             self._body_height_joint_targets = targets
             self._body_height_watchdog_stopped = False
+            self._body_height_watchdog_hold = None
             self._waist_follow_neutral_pitch_deg = float(targets[2])
             self._waist_follow_pitch_target_deg = float(targets[2]) + waist_assist_delta
             self._body_height_command_time = now
@@ -2958,13 +3026,18 @@ class IndependentArmController(Node):
         groups['left_arm'] = left
         groups['right_arm'] = right
         groups['neck'] = neck
-        # Both arm-reset chords preserve the measured body pose, including
-        # forward/reverse crouch and torso yaw. Standing is a height command,
-        # not a side effect of an arm/head reset.
+        # X+A restores the configured waist posture while preserving ankle and
+        # knee, so it does not initiate a standing/squatting height command.
+        # The separate held-gripper reset continues to preserve body posture.
+        if source == 'quick_reset':
+            waist = np.asarray(self.get_parameter('quick_reset_waist_joints').value, dtype=float).reshape(-1)
+            if waist.size != 2 or not np.all(np.isfinite(waist)):
+                return 'quick reset waist configuration must contain two finite angles'
+            groups['leg_waist'][2:4] = waist_reset_reference(waist, groups['leg_waist'])
         guard_error, q = self._configuration_guard_error(
             groups,
             'quick reset target',
-            limit_joint_names=ARM_JOINT_NAMES + list(BODY_HEIGHT_JOINT_NAMES),
+            limit_joint_names=ARM_JOINT_NAMES + list(BODY_HEIGHT_JOINT_NAMES) + ['Joint_Waist_Yaw'],
         )
         if guard_error:
             return guard_error
@@ -4120,13 +4193,12 @@ class IndependentArmController(Node):
             body_height_output_lead = max(
                 0.1, float(self._body_height_command_lead_deg)
             )
-            waist_assist_output_active = bool(
-                self._waist_follow_enabled
-                and self._waist_follow_profile == 'forward_pitch_only'
-                and self._waist_follow_neutral_pitch_deg is not None
-                and self._waist_follow_pitch_target_deg is not None
-                and float(self._waist_follow_pitch_target_deg)
-                > float(self._waist_follow_neutral_pitch_deg) + 1.0e-3
+            waist_assist_output_active = _waist_assist_window_active(
+                self._waist_follow_enabled, self._waist_follow_profile,
+                self._waist_follow_neutral_pitch_deg, self._waist_follow_pitch_target_deg,
+                self._target_source, self._grip_release_held,
+                None if feedback is None else feedback.leg_waist[2],
+                feedback_age <= float(self.get_parameter('feedback_timeout_sec').value),
             )
             waist_assist_output_lead = max(
                 0.1,
@@ -4289,7 +4361,8 @@ class IndependentArmController(Node):
                     # requested return: hold the actual torso position.
                     neutral_pitch = float(current_vector[2])
                     desired[2] = neutral_pitch
-                    self._waist_follow_neutral_pitch_deg = neutral_pitch
+                    # Input timeout holds measured pitch, preserving the
+                    # original baseline and remaining assist budget.
                     self._waist_follow_pitch_target_deg = neutral_pitch
                     self._waist_follow_extension_m = 0.0
                 self._target_velocity_estimate.fill(0.0)
@@ -4520,16 +4593,21 @@ class IndependentArmController(Node):
                                 [float(self.get_parameter('waist_assist_max_acceleration_deg_sec2').value)],
                             )
                             self._waist_assist_limiter.reset(current_vector[2:3])
-                        # Do not let the command get more than 2 degrees ahead
-                        # of actual feedback, even if the motor is delayed.
+                        # Bound the waist target to fresh measured feedback.
+                        # Cap the configurable window to keep a small error
+                        # even when the actuator is delayed or stalled.
+                        feedback_lead = float(np.clip(
+                            float(self.get_parameter('waist_assist_feedback_lead_deg').value),
+                            0.1, 6.0,
+                        ))
                         desired_waist = np.clip(command_vector[2],
-                                                current_vector[2] - 2.0,
-                                                current_vector[2] + 2.0)
+                                                current_vector[2] - feedback_lead,
+                                                current_vector[2] + feedback_lead)
                         command_vector[2] = self._waist_assist_limiter.step(
                             np.array([desired_waist]), dt)[0]
                         command_vector[2] = np.clip(command_vector[2],
-                                                    current_vector[2] - 2.0,
-                                                    current_vector[2] + 2.0)
+                                                    current_vector[2] - feedback_lead,
+                                                    current_vector[2] + feedback_lead)
                     else:
                         # Reset the private motion history across every control
                         # boundary so stale momentum cannot leak into a regrip.
@@ -4539,6 +4617,8 @@ class IndependentArmController(Node):
                         command_vector[4:18] = self._arm_smoother.step(
                             current_vector[4:18], command_vector[4:18],
                             maximum_lead[4:18], dt, self._velocity_active_sides,
+                            target_velocity=(self._target_velocity_estimate[4:18]
+                                if now-self._target_time < .04 else np.zeros(14)),
                         )
                     else:
                         # A stale stream and all safety holds are immediate.

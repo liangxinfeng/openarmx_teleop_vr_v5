@@ -125,9 +125,9 @@ it does not claim that the Cartesian target has already been reached.
 
     _HISTORY_FIELDS = (
         '_previous_commands', '_previous_velocities', '_reference_keys',
-        '_session_references', '_target_history', '_return_shape_history',
+        '_session_references', '_target_history', '_return_shape_history', '_straight_history',
     )
-    algorithm_revision = 'shoulder-progress-lead-20261028'
+    algorithm_revision = 'clutch-frame-tracking-20261030'
 
     def __init__(
         self, urdf_path, srdf_path='', allow_waist=False, collision_check=True,
@@ -198,6 +198,10 @@ it does not claim that the Cartesian target has already been reached.
         }
         # Only the redundant elbow plane is regulated.  No ideal two-link
         # lengths or 3D elbow position are imposed on this offset-joint URDF.
+        self.straight_posture_tasks = {
+            side: mink.PostureTask(self.mujoco_model, cost=np.zeros(self.mujoco_model.nv))
+            for side in ARM_JOINTS
+        }
         self.elbow_plane_tasks = {
             side: ElbowPlaneTask(self.mujoco_model, side, cost=1.0)
             for side in ARM_JOINTS
@@ -362,6 +366,7 @@ it does not claim that the Cartesian target has already been reached.
                 self._previous_velocities[side] = np.zeros(7)
                 self._target_history.pop(side, None)
                 self._return_shape_history.pop(side, None)
+                self._straight_history.pop(side, None)
             previous = self._previous_commands[side]
             previous_velocity = self._previous_velocities[side]
             lead_vector = np.full(7, lead)
@@ -440,7 +445,7 @@ it does not claim that the Cartesian target has already been reached.
                     reach_projection = extension*max(0., outward-available)
                     effective_transform[:3, 3] -= reach_projection*radial
             self.tasks[side].set_target(mink.SE3.from_matrix(effective_transform))
-            orientation_cost = self._orientation_weight*(1.-0.5*extension)
+            orientation_cost = self._orientation_weight*(1.-0.75*extension)
             self.tasks[side].set_orientation_cost(orientation_cost)
             task_stack.append(self.tasks[side])
 
@@ -497,6 +502,36 @@ it does not claim that the Cartesian target has already been reached.
             self.posture_tasks[side].set_cost(costs)
             self.posture_tasks[side].set_target(posture_q)
             task_stack.append(self.posture_tasks[side])
+            # Three collinear joint centres cannot strongly constrain axial
+            # rotation. Capture the near-extension arm axes once, rather than
+            # chasing small orientation residuals with a rotating elbow.
+            straight = self._straight_history.get(side)
+            if straight is None:
+                straight = {'reference': q_seed[idx].copy(), 'blend': 0.0, 'retreating': False}
+            requested_blend = float(np.clip((np.deg2rad(28.)-elbow)/np.deg2rad(20.), 0., 1.))
+            requested_blend = requested_blend**2*(3.-2.*requested_blend)
+            # Release the axial preference on inward intent, not only AFTER
+            # the elbow bends. Waiting for bend creates a circular constraint.
+            if extension > 0. and radius > .05:
+                if outward < -.008:
+                    straight['retreating'] = True
+                elif outward > .012:
+                    straight['retreating'] = False
+            if straight.get('retreating', False):
+                requested_blend = 0.0
+            straight['blend'] += (1.-np.exp(-dt/.10))*(requested_blend-straight['blend'])
+            if elbow>=np.deg2rad(32.) and straight['blend']<.001:
+                self._straight_history.pop(side, None)
+            else:
+                self._straight_history[side] = straight
+            axial_costs = np.zeros(self.mujoco_model.nv)
+            axial_q = seed_mj.copy()
+            for j, cost in ((2, .12), (4, .03)):
+                axial_costs[self._mj_v[names[j]]] = cost*straight['blend']
+                axial_q[self._mj_q[names[j]]] = straight['reference'][j]
+            self.straight_posture_tasks[side].set_cost(axial_costs)
+            self.straight_posture_tasks[side].set_target(axial_q)
+            task_stack.append(self.straight_posture_tasks[side])
             self.last_retarget_status[side] = {
                 'solver': 'mink/quadprog', 'reference_locked': True,
                 'algorithm_revision': self.algorithm_revision,
@@ -509,6 +544,8 @@ it does not claim that the Cartesian target has already been reached.
                 'return_distance_m': return_distance,
                 'return_start_m': float(return_start_m) if home is not None else .10,
                 'extension_blend': extension,
+                'straight_axial_blend': straight['blend'],
+                'straight_axial_reference_deg': np.rad2deg(straight['reference'][[2,4]]).tolist(),
                 'reach_projection_m': reach_projection,
                 'lead_limit_deg': float(np.rad2deg(lead)),
                 'shoulder_lead_limit_deg': float(np.rad2deg(shoulder_lead)),
